@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Supplier;
 
 public class HeaderParser implements HeaderSupplier {
     /*
@@ -12,48 +13,15 @@ public class HeaderParser implements HeaderSupplier {
      * TODO: implement https://datatracker.ietf.org/doc/html/rfc4180
      */
 
-    private final char _separator;
+    private final RecordParser _recordParser;
 
     public HeaderParser(char separator) {
-        _separator = separator;
+        _recordParser = new RecordParser(separator);
     }
 
     public CSVMeta parse(BufferedReader reader) throws IOException {
-        final List<String> names = new ArrayList<>();
-        var nameBuider = new StringBuilder();
+        List<String> values = _recordParser.parse(reader);
 
-        while (true) {
-            int v = reader.read();
-            if (v < 0) {
-                names.add(nameBuider.toString());
-                break;
-            }
-            char c = (char)v;
-
-            if (c == _separator) {
-                names.add(nameBuider.toString());
-                nameBuider = new StringBuilder();
-            } else {
-                nameBuider.append(c);
-            }
-        }
-
-        System.out.println("names: " + names);
-        return new CSVMeta() {
-            @Override
-            public boolean hasHeader() {
-                return true;
-            }
-
-            @Override
-            public int columnsNumber() {
-                return names.size();
-            }
-
-            @Override
-            public String columnName(int i) {
-                return names.get(i);
-            }
-        };
+        return CSVMeta.withNames(values);
     }
 }
