@@ -5,3 +5,7 @@
 plugins {
     id("ru.study21.jcsv.xxl.java-library-conventions")
 }
+
+dependencies {
+    implementation("com.typesafe:config:1.4.1")
+}
