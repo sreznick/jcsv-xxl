@@ -58,7 +58,7 @@ public class RecordParser implements RecordSupplier {
         StringBuilder result = new StringBuilder();
         while (true) {
             if (v < 0) {
-                return new Result(Reason.END_OF_LINE, result.toString());
+                return new Result(Reason.END_OF_INPUT, result.toString());
             }
 
             char c = (char)v;
@@ -80,8 +80,11 @@ public class RecordParser implements RecordSupplier {
 
         while (true) {
             Result result = parseValue(reader);
+            if (result.reason == Reason.END_OF_INPUT && values.size() == 0 && result.value.isEmpty()) {
+                break;
+            }
             values.add(result.value());
-            if (result.reason == Reason.END_OF_LINE) {
+            if (result.reason == Reason.END_OF_LINE || result.reason == Reason.END_OF_INPUT) {
                 break;
             }
         }
@@ -91,7 +94,8 @@ public class RecordParser implements RecordSupplier {
 
     private enum Reason {
         END_OF_LINE,
-        END_OF_COLUMN
+        END_OF_COLUMN,
+        END_OF_INPUT
     }
     private static record Result(Reason reason, String value) {
     }
