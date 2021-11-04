@@ -7,6 +7,7 @@ plugins {
 }
 
 dependencies {
+    implementation("info.picocli", "picocli", "4.6.1")
     implementation("org.apache.commons:commons-text")
     implementation(project(":utilities"))
 }
