@@ -12,4 +12,6 @@ dependencies {
 
     testCompileOnly(group="org.projectlombok", name="lombok", version="1.18.22")
     testAnnotationProcessor(group="org.projectlombok", name="lombok", version="1.18.22")
+
+    implementation("com.typesafe:config:1.4.1")
 }
