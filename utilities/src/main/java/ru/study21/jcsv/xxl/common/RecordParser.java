@@ -65,7 +65,7 @@ public class RecordParser implements RecordSupplier {
             if (c == _separator) {
                 return new Result(Reason.END_OF_COLUMN, result.toString());
 
-            } else if (c == '\n' || c == '\r') {
+            } else if (c == '\n'/* || c == '\r'*/) { // TODO: fix: for CRLF it stops after \r, the next result is '\n'
                     return new Result(Reason.END_OF_LINE, result.toString());
             } else {
                 result.append(c);

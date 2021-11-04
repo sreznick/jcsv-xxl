@@ -32,9 +32,10 @@ public class CSVBasicAnalyzer {
                 break;
             }
             if (row.size() != _csvReader.meta().size()) {
-                throw new BrokenContentsException("illegal number of fields");
+                throw new BrokenContentsException("row " + summary.getNRows() + ": expected " + _csvReader.meta().size()
+                        + " columns, got " + row.size());
             }
-            for (int i=0; i < row.size(); ++i) {
+            for (int i = 0; i < row.size(); ++i) {
                 ColumnSummary columnSummary = summary.getColumns().get(i);
                 if (row.get(i).isEmpty()) {
                     columnSummary.setHasEmpty(true);
@@ -74,7 +75,7 @@ public class CSVBasicAnalyzer {
             try {
                 new BigInteger(value);
                 return baseType;
-            } catch (NumberFormatException e) {
+            } catch (NumberFormatException ignored) {
             }
         }
 
