@@ -18,27 +18,61 @@ public class CSVBasicAnalyzerTest {
     void testSingleColumn() {
         String text = "name\nvalue1\nvalue2\n";
 
-         try (BufferedReader reader = readerOf(text)) {
-             DefaultCSVReader csvReader = DefaultCSVReader.builder(reader).withHeader().build();
-             CSVBasicAnalyzer analyzer = new CSVBasicAnalyzer(csvReader);
+        try (BufferedReader reader = readerOf(text)) {
+            DefaultCSVReader csvReader = DefaultCSVReader.builder(reader).withHeader().build();
+            CSVBasicAnalyzer analyzer = new CSVBasicAnalyzer(csvReader);
 
-             CSVSummary summary = analyzer.run();
+            CSVSummary summary = analyzer.run();
 
-             CSVMeta meta = summary.getMeta();
+            CSVMeta meta = summary.getMeta();
 
-             assertNotNull(meta);
-             assertTrue(meta.hasNames());
-             assertEquals(1, meta.size());
-             assertEquals("name", meta.columnName(0));
+            assertNotNull(meta);
+            assertTrue(meta.hasNames());
+            assertEquals(1, meta.size());
+            assertEquals("name", meta.columnName(0));
 
-             assertEquals(2, summary.getNRows());
-             ColumnSummary columnSummary = summary.getColumns().get(0);
-             assertEquals(ColumnType.STRING, columnSummary.getType());
-             assertEquals(6, columnSummary.getMaxStringSize());
-             assertFalse(columnSummary.isHasEmpty());
-         } catch (IOException| BrokenContentsException e) {
-                Assertions.fail("Unexpected " + e);
-            }
+            assertEquals(2, summary.getNRows());
+            ColumnSummary columnSummary = summary.getColumns().get(0);
+            assertEquals(ColumnType.STRING, columnSummary.getType());
+            assertEquals(6, columnSummary.getMaxStringSize());
+            assertFalse(columnSummary.isHasEmpty());
+        } catch (IOException | BrokenContentsException e) {
+            Assertions.fail("Unexpected " + e);
+        }
+    }
+
+    @Test
+    void testMultipleColumns() {
+        String text = "text,int\na,1\n,2\n";
+
+        try (BufferedReader reader = readerOf(text)) {
+            DefaultCSVReader csvReader = DefaultCSVReader.builder(reader).withHeader().build();
+            CSVBasicAnalyzer analyzer = new CSVBasicAnalyzer(csvReader);
+
+            CSVSummary summary = analyzer.run();
+
+            CSVMeta meta = summary.getMeta();
+
+            assertNotNull(meta);
+            assertTrue(meta.hasNames());
+            assertEquals(2, meta.size());
+            assertEquals("text", meta.columnName(0));
+            assertEquals("int", meta.columnName(1));
+
+            assertEquals(2, summary.getNRows());
+
+            ColumnSummary textSummary = summary.getColumns().get(0);
+            assertEquals(ColumnType.STRING, textSummary.getType());
+            assertEquals(1, textSummary.getMaxStringSize());
+            assertTrue(textSummary.isHasEmpty());
+
+            ColumnSummary intSummary = summary.getColumns().get(1);
+            assertEquals(ColumnType.INTEGER, intSummary.getType());
+            assertFalse(intSummary.isHasEmpty());
+
+        } catch (IOException | BrokenContentsException e) {
+            Assertions.fail("Unexpected " + e);
+        }
     }
 
     private BufferedReader readerOf(String value) {
