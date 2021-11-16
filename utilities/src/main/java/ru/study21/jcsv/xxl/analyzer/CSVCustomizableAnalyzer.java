@@ -1,10 +1,13 @@
 package ru.study21.jcsv.xxl.analyzer;
 
 import ru.study21.jcsv.xxl.common.BrokenContentsException;
+import ru.study21.jcsv.xxl.common.CSVRow;
 import ru.study21.jcsv.xxl.io.CSVReader;
 
-import java.math.BigDecimal;
+import java.io.BufferedWriter;
+import java.io.IOException;
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.function.Function;
 
@@ -42,14 +45,15 @@ public class CSVCustomizableAnalyzer {
     }
 
     public interface Action<R> {
-        void acceptRow(List<String> row);
+        void acceptRow(CSVRow row);
+        void finish();
 
         R getResult();
     }
 
     public List<?> run() throws BrokenContentsException {
         while (true) {
-            List<String> row = _csvReader.nextRow();
+            CSVRow row = _csvReader.nextRow();
             if (row.size() == 0) {
                 break;
             }
@@ -59,6 +63,9 @@ public class CSVCustomizableAnalyzer {
             for (Action<?> action : actions) {
                 action.acceptRow(row);
             }
+        }
+        for (Action<?> action : actions) {
+            action.finish();
         }
         return actions.stream().map(Action::getResult).toList();
     }
@@ -70,7 +77,7 @@ public class CSVCustomizableAnalyzer {
             private BigInteger sum = BigInteger.ZERO;
 
             @Override
-            public void acceptRow(List<String> row) {
+            public void acceptRow(CSVRow row) {
                 sum = sum.add(new BigInteger(row.get(colIndex)));
             }
 
@@ -78,6 +85,9 @@ public class CSVCustomizableAnalyzer {
             public BigInteger getResult() {
                 return sum;
             }
+
+            @Override
+            public void finish() {}
         };
     }
 
@@ -87,7 +97,7 @@ public class CSVCustomizableAnalyzer {
             private BigInteger count = BigInteger.ZERO;
 
             @Override
-            public void acceptRow(List<String> row) {
+            public void acceptRow(CSVRow row) {
                 sum = sum.add(new BigInteger(row.get(colIndex)));
                 count = count.add(BigInteger.ONE);
             }
@@ -103,6 +113,9 @@ public class CSVCustomizableAnalyzer {
                 result += divisionResult[1].doubleValue() / count.doubleValue();
                 return result;
             }
+
+            @Override
+            public void finish() {}
         };
     }
 
@@ -117,7 +130,7 @@ public class CSVCustomizableAnalyzer {
             private final PriorityQueue<T> maxValues = new PriorityQueue<>(comparator);
 
             @Override
-            public void acceptRow(List<String> row) {
+            public void acceptRow(CSVRow row) {
                 maxValues.add(parser.apply(row.get(colIndex)));
                 if (maxValues.size() > nValues) {
                     maxValues.poll();
@@ -133,6 +146,9 @@ public class CSVCustomizableAnalyzer {
                 Collections.reverse(result);
                 return result;
             }
+
+            @Override
+            public void finish() {}
         };
     }
 
@@ -146,7 +162,7 @@ public class CSVCustomizableAnalyzer {
                     maxValuesIntAction(colIndex, 1);
 
             @Override
-            public void acceptRow(List<String> row) {
+            public void acceptRow(CSVRow row) {
                 delegate.acceptRow(row);
             }
 
@@ -154,7 +170,80 @@ public class CSVCustomizableAnalyzer {
             public Integer getResult() {
                 return delegate.getResult().get(0);
             }
+
+            @Override
+            public void finish() {}
         };
     }
 
+    public static Action<Long> withOffsetsSizeAction(int colIndex) {
+        return new Action<>() {
+            Long size = 0L;
+
+            @Override
+            public void acceptRow(CSVRow row) {
+                size += Long.SIZE + row.get(colIndex).getBytes(StandardCharsets.UTF_8).length;
+            }
+
+            @Override
+            public Long getResult() {
+                return size;
+            }
+
+            @Override
+            public void finish() {}
+        };
+    }
+
+    public static Action<Boolean> offsetsWriteAction(BufferedWriter writer, int colIndex) {
+        return new Action<>() {
+            boolean result = true;
+
+            @Override
+            public void acceptRow(CSVRow row) {
+                try {
+                    writer.write(String.join(",", String.valueOf(row.offset()), row.get(colIndex)) + "\n");
+                } catch (IOException e) {
+                    result = false;
+                }
+            }
+
+            @Override
+            public Boolean getResult() {
+                return result;
+            }
+
+            @Override
+            public void finish() {
+                try {
+                    writer.flush();
+                } catch (IOException e) {
+                    result = false;
+                }
+            }
+        };
+    }
+
+    public static Action<ArrayList<CSVRow>> subRowAction(List<Integer> colIndexes) {
+        return new Action<>() {
+            ArrayList<CSVRow> result = new ArrayList<>();
+
+            @Override
+            public void acceptRow(CSVRow row) {
+                List<String> newRow = new ArrayList<>();
+                for (Integer colIndex : colIndexes) {
+                    newRow.add(row.get(colIndex));
+                }
+                result.add(new CSVRow(newRow, row.offset()));
+            }
+
+            @Override
+            public ArrayList<CSVRow> getResult() {
+                return result;
+            }
+
+            @Override
+            public void finish() {}
+        };
+    }
 }

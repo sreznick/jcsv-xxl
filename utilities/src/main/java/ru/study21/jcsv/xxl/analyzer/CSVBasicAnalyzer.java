@@ -1,6 +1,7 @@
 package ru.study21.jcsv.xxl.analyzer;
 
 import ru.study21.jcsv.xxl.common.BrokenContentsException;
+import ru.study21.jcsv.xxl.common.CSVRow;
 import ru.study21.jcsv.xxl.io.CSVReader;
 
 import java.math.BigInteger;
@@ -27,7 +28,7 @@ public class CSVBasicAnalyzer {
         }
         CSVSummary summary = new CSVSummary(_csvReader.meta(), 0, columns);
         while (true) {
-            List<String> row = _csvReader.nextRow();
+            CSVRow row = _csvReader.nextRow();
             if (row.size() == 0) {
                 break;
             }
