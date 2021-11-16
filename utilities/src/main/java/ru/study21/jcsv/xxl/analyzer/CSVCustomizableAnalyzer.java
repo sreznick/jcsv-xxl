@@ -9,6 +9,7 @@ import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.function.Function;
@@ -171,6 +172,25 @@ public class CSVCustomizableAnalyzer {
             @Override
             public Integer getResult() {
                 return delegate.getResult().get(0);
+            }
+
+            @Override
+            public void finish() {}
+        };
+    }
+
+    public static Action<Long> withOffsetsSizeAction(int colIndex) {
+        return new Action<>() {
+            Long size = 0L;
+
+            @Override
+            public void acceptRow(CSVRow row) {
+                size += Long.SIZE + row.get(colIndex).getBytes(StandardCharsets.UTF_8).length;
+            }
+
+            @Override
+            public Long getResult() {
+                return size;
             }
 
             @Override

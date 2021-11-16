@@ -159,4 +159,22 @@ public class CSVCustomizableAnalyzerTest {
         }
     }
 
+    @Test
+    void testWithOffsetsSizeActions() {
+        String text = "name,time,text\ntwo,2,second\none,\"1\",first\nthree,3,third\nfour,4,fourth\n";
+
+        try (BufferedReader reader = new BufferedReader(new StringReader(text))) {
+            DefaultCSVReader csvReader = DefaultCSVReader.builder(reader).withHeader().build();
+            CSVCustomizableAnalyzer analyzer = CSVCustomizableAnalyzer.builder(csvReader)
+                    .addAction(CSVCustomizableAnalyzer.withOffsetsSizeAction(2))
+                    .build();
+
+            List<?> result = analyzer.run();
+
+            assertNotNull(result);
+            assertIterableEquals(List.of(278L), result);
+        } catch (IOException | BrokenContentsException e) {
+            Assertions.fail("Unexpected " + e);
+        }
+    }
 }
