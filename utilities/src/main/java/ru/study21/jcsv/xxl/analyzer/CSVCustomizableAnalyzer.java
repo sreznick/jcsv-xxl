@@ -178,39 +178,30 @@ public class CSVCustomizableAnalyzer {
         };
     }
 
-    public static Action<Path> offsetsWriteAction(FileManager fileManager, int colIndex) {
+    public static Action<Boolean> offsetsWriteAction(BufferedWriter writer, int colIndex) {
         return new Action<>() {
-            private Path file;
-            BufferedWriter writer;
-            {
-                try {
-                    file = fileManager.createTempFileWithSuffix("offsets", "csv");
-                    writer = new BufferedWriter(new FileWriter(file.toFile()));
-                } catch (IOException e) {
-                    e.printStackTrace(); //TODO: make meaningful error
-                }
-            }
+            boolean result = true;
 
             @Override
             public void acceptRow(CSVRow row) {
                 try {
                     writer.write(String.join(",", String.valueOf(row.offset()), row.get(colIndex)) + "\n");
                 } catch (IOException e) {
-                    e.printStackTrace(); //TODO: make meaningful error
+                    result = false;
                 }
             }
 
             @Override
-            public Path getResult() {
-                return file;
+            public Boolean getResult() {
+                return result;
             }
 
             @Override
             public void finish() {
                 try {
-                    writer.close();
+                    writer.flush();
                 } catch (IOException e) {
-                    e.printStackTrace(); //TODO: make meaningful error
+                    result = false;
                 }
             }
         };

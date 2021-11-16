@@ -9,9 +9,7 @@ import ru.study21.jcsv.xxl.common.CSVRow;
 import ru.study21.jcsv.xxl.io.DefaultCSVReader;
 import ru.study21.jcsv.xxl.io.FileManager;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.StringReader;
+import java.io.*;
 import java.math.BigInteger;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -135,22 +133,24 @@ public class CSVCustomizableAnalyzerTest {
 
     @Test
     void testOffsetsWriteActions() {
-        String text = "name,time,text\ntwo,2,second\none,1,first\nthree,3,third\nfour,4,fourth\n";
+        String text = "name,time,text\ntwo,2,second\none,\"1\",first\nthree,3,third\nfour,4,fourth\n";
 
         try (BufferedReader reader = new BufferedReader(new StringReader(text))) {
             DefaultCSVReader csvReader = DefaultCSVReader.builder(reader).withHeader().build();
             FileManager fileManager = FileManager.createTempDirectory("offsetsTest");
+            Path offsetsPath = fileManager.createTempFileWithSuffix("offsets", "csv");
+            BufferedWriter writer = new BufferedWriter(new FileWriter(offsetsPath.toFile()));
             CSVCustomizableAnalyzer analyzer = CSVCustomizableAnalyzer.builder(csvReader)
-                    .addAction(CSVCustomizableAnalyzer.offsetsWriteAction(fileManager, 1))
+                    .addAction(CSVCustomizableAnalyzer.offsetsWriteAction(writer, 1))
                     .build();
 
             List<?> result = analyzer.run();
 
             assertNotNull(result);
-            Path offsetsFile = (Path) result.get(0);
-            assertTrue(Files.exists(offsetsFile));
+            assertIterableEquals(List.of(true), result);
+            assertTrue(Files.exists(offsetsPath));
 
-            List<String> lines = Files.readAllLines(offsetsFile);
+            List<String> lines = Files.readAllLines(offsetsPath);
             assertIterableEquals(List.of("0,2", "1,1", "2,3", "3,4"), lines);
 
             fileManager.delete();
