@@ -38,12 +38,17 @@ public class CSVCustomizableAnalyzerTest {
                         public Integer getResult() {
                             return sum;
                         }
+
+                        @Override
+                        public void finish() {
+                            sum *= 2;
+                        }
                     }).build();
 
             List<?> result = analyzer.run();
 
             assertNotNull(result);
-            assertIterableEquals(List.of(10), result);
+            assertIterableEquals(List.of(20), result);
 
         } catch (IOException | BrokenContentsException e) {
             Assertions.fail("Unexpected " + e);
@@ -69,6 +74,9 @@ public class CSVCustomizableAnalyzerTest {
                         public Integer getResult() {
                             return sum;
                         }
+
+                        @Override
+                        public void finish() {}
                     })
                     .addAction(new CSVCustomizableAnalyzer.Action<Integer>() {
                         int prod = 1;
@@ -82,6 +90,9 @@ public class CSVCustomizableAnalyzerTest {
                         public Integer getResult() {
                             return prod;
                         }
+
+                        @Override
+                        public void finish() {}
                     }).build();
 
             List<?> result = analyzer.run();

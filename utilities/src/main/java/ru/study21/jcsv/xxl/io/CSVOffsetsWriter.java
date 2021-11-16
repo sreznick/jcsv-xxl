@@ -17,9 +17,10 @@ public class CSVOffsetsWriter implements CSVWriter {
         _rowNumber = 1;
     }
 
-    public void writeRow(List<String> row) {
-
-    }
+//    @Override
+//    public void writeRow(List<String> row) {
+//
+//    }
 
     public static Builder builder(BufferedWriter writer, int columnIndex) {
         return new Builder(writer, columnIndex);

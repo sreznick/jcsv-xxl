@@ -43,6 +43,7 @@ public class CSVCustomizableAnalyzer {
 
     public interface Action<R> {
         void acceptRow(CSVRow row);
+        void finish();
 
         R getResult();
     }
@@ -59,6 +60,9 @@ public class CSVCustomizableAnalyzer {
             for (Action<?> action : actions) {
                 action.acceptRow(row);
             }
+        }
+        for (Action<?> action : actions) {
+            action.finish();
         }
         return actions.stream().map(Action::getResult).toList();
     }
@@ -78,6 +82,9 @@ public class CSVCustomizableAnalyzer {
             public BigInteger getResult() {
                 return sum;
             }
+
+            @Override
+            public void finish() {}
         };
     }
 
@@ -103,6 +110,9 @@ public class CSVCustomizableAnalyzer {
                 result += divisionResult[1].doubleValue() / count.doubleValue();
                 return result;
             }
+
+            @Override
+            public void finish() {}
         };
     }
 
@@ -133,6 +143,9 @@ public class CSVCustomizableAnalyzer {
                 Collections.reverse(result);
                 return result;
             }
+
+            @Override
+            public void finish() {}
         };
     }
 
@@ -154,6 +167,9 @@ public class CSVCustomizableAnalyzer {
             public Integer getResult() {
                 return delegate.getResult().get(0);
             }
+
+            @Override
+            public void finish() {}
         };
     }
 
