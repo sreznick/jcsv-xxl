@@ -3,14 +3,11 @@ package ru.study21.jcsv.xxl.analyzer;
 import ru.study21.jcsv.xxl.common.BrokenContentsException;
 import ru.study21.jcsv.xxl.common.CSVRow;
 import ru.study21.jcsv.xxl.io.CSVReader;
-import ru.study21.jcsv.xxl.io.FileManager;
 
 import java.io.BufferedWriter;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
 import java.util.*;
 import java.util.function.Function;
 
@@ -224,6 +221,29 @@ public class CSVCustomizableAnalyzer {
                     result = false;
                 }
             }
+        };
+    }
+
+    public static Action<ArrayList<CSVRow>> subRowAction(List<Integer> colIndexes) {
+        return new Action<>() {
+            ArrayList<CSVRow> result = new ArrayList<>();
+
+            @Override
+            public void acceptRow(CSVRow row) {
+                List<String> newRow = new ArrayList<>();
+                for (Integer colIndex : colIndexes) {
+                    newRow.add(row.get(colIndex));
+                }
+                result.add(new CSVRow(newRow, row.offset()));
+            }
+
+            @Override
+            public ArrayList<CSVRow> getResult() {
+                return result;
+            }
+
+            @Override
+            public void finish() {}
         };
     }
 }

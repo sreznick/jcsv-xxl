@@ -13,6 +13,7 @@ import java.io.*;
 import java.math.BigInteger;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.List;
 import java.util.function.Function;
 
@@ -147,6 +148,7 @@ public class CSVCustomizableAnalyzerTest {
             List<?> result = analyzer.run();
 
             assertNotNull(result);
+
             assertIterableEquals(List.of(true), result);
             assertTrue(Files.exists(offsetsPath));
 
@@ -173,6 +175,30 @@ public class CSVCustomizableAnalyzerTest {
 
             assertNotNull(result);
             assertIterableEquals(List.of(278L), result);
+        } catch (IOException | BrokenContentsException e) {
+            Assertions.fail("Unexpected " + e);
+        }
+    }
+
+    @Test
+    void testSubRowActions() {
+        String text = "name,time,text\ntwo,2,second\none,\"1\",first\nthree,3,third\nfour,4,fourth\n";
+
+        try (BufferedReader reader = new BufferedReader(new StringReader(text))) {
+            DefaultCSVReader csvReader = DefaultCSVReader.builder(reader).withHeader().build();
+            List<Integer> colIndexes = Arrays.asList(0, 2);
+            CSVCustomizableAnalyzer analyzer = CSVCustomizableAnalyzer.builder(csvReader)
+                    .addAction(CSVCustomizableAnalyzer.subRowAction(colIndexes))
+                    .build();
+
+            List<?> result = analyzer.run();
+
+            assertNotNull(result);
+            assertIterableEquals(List.of(List.of(
+                    new CSVRow(List.of("two",   "second"), 0),
+                    new CSVRow(List.of("one",   "first"),  1),
+                    new CSVRow(List.of("three", "third"),  2),
+                    new CSVRow(List.of("four",  "fourth"), 3))), result);
         } catch (IOException | BrokenContentsException e) {
             Assertions.fail("Unexpected " + e);
         }
