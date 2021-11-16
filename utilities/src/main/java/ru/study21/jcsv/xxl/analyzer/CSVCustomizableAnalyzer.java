@@ -3,8 +3,13 @@ package ru.study21.jcsv.xxl.analyzer;
 import ru.study21.jcsv.xxl.common.BrokenContentsException;
 import ru.study21.jcsv.xxl.common.CSVRow;
 import ru.study21.jcsv.xxl.io.CSVReader;
+import ru.study21.jcsv.xxl.io.FileManager;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.math.BigInteger;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.function.Function;
 
@@ -173,4 +178,41 @@ public class CSVCustomizableAnalyzer {
         };
     }
 
+    public static Action<Path> offsetsWriteAction(FileManager fileManager, int colIndex) {
+        return new Action<>() {
+            private Path file;
+            BufferedWriter writer;
+            {
+                try {
+                    file = fileManager.createTempFileWithSuffix("offsets", "csv");
+                    writer = new BufferedWriter(new FileWriter(file.toFile()));
+                } catch (IOException e) {
+                    e.printStackTrace(); //TODO: make meaningful error
+                }
+            }
+
+            @Override
+            public void acceptRow(CSVRow row) {
+                try {
+                    writer.write(String.join(",", String.valueOf(row.offset()), row.get(colIndex)) + "\n");
+                } catch (IOException e) {
+                    e.printStackTrace(); //TODO: make meaningful error
+                }
+            }
+
+            @Override
+            public Path getResult() {
+                return file;
+            }
+
+            @Override
+            public void finish() {
+                try {
+                    writer.close();
+                } catch (IOException e) {
+                    e.printStackTrace(); //TODO: make meaningful error
+                }
+            }
+        };
+    }
 }

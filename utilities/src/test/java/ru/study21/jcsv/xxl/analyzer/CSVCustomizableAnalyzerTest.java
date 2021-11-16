@@ -7,15 +7,19 @@ import ru.study21.jcsv.xxl.common.BrokenContentsException;
 import ru.study21.jcsv.xxl.common.CSVMeta;
 import ru.study21.jcsv.xxl.common.CSVRow;
 import ru.study21.jcsv.xxl.io.DefaultCSVReader;
+import ru.study21.jcsv.xxl.io.FileManager;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.StringReader;
 import java.math.BigInteger;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.function.Function;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 
 public class CSVCustomizableAnalyzerTest {
 
@@ -124,6 +128,32 @@ public class CSVCustomizableAnalyzerTest {
             assertNotNull(result);
             assertIterableEquals(List.of(4, new BigInteger("10"), List.of("d", "c"), 2.5), result);
 
+        } catch (IOException | BrokenContentsException e) {
+            Assertions.fail("Unexpected " + e);
+        }
+    }
+
+    @Test
+    void testOffsetsWriteActions() {
+        String text = "name,time,text\ntwo,2,second\none,1,first\nthree,3,third\nfour,4,fourth\n";
+
+        try (BufferedReader reader = new BufferedReader(new StringReader(text))) {
+            DefaultCSVReader csvReader = DefaultCSVReader.builder(reader).withHeader().build();
+            FileManager fileManager = FileManager.createTempDirectory("offsetsTest");
+            CSVCustomizableAnalyzer analyzer = CSVCustomizableAnalyzer.builder(csvReader)
+                    .addAction(CSVCustomizableAnalyzer.offsetsWriteAction(fileManager, 1))
+                    .build();
+
+            List<?> result = analyzer.run();
+
+            assertNotNull(result);
+            Path offsetsFile = (Path) result.get(0);
+            assertTrue(Files.exists(offsetsFile));
+
+            List<String> lines = Files.readAllLines(offsetsFile);
+            assertIterableEquals(List.of("0,2", "1,1", "2,3", "3,4"), lines);
+
+            fileManager.delete();
         } catch (IOException | BrokenContentsException e) {
             Assertions.fail("Unexpected " + e);
         }
