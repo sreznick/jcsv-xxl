@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import ru.study21.jcsv.xxl.common.BrokenContentsException;
 import ru.study21.jcsv.xxl.common.CSVMeta;
+import ru.study21.jcsv.xxl.common.CSVRow;
 import ru.study21.jcsv.xxl.common.HeaderParser;
 
 import java.io.BufferedReader;
@@ -27,7 +28,7 @@ public class DefaultCSVReaderTest {
              assertEquals(1, meta.size());
              assertEquals("name", meta.columnName(0));
 
-             List<String> row = csvReader.nextRow();
+             CSVRow row = csvReader.nextRow();
              assertNotNull(row);
              assertEquals(1, row.size());
              assertEquals("value1", row.get(0));
@@ -59,11 +60,12 @@ public class DefaultCSVReaderTest {
             assertEquals("name1", meta.columnName(0));
             assertEquals("name2", meta.columnName(1));
 
-            List<String> row = csvReader.nextRow();
+            CSVRow row = csvReader.nextRow();
             assertNotNull(row);
             assertEquals(2, row.size());
             assertEquals("value1", row.get(0));
             assertEquals("value2", row.get(1));
+            assertEquals(0, row.offset());
 
             row = csvReader.nextRow();
             assertNotNull(row);
@@ -71,6 +73,7 @@ public class DefaultCSVReaderTest {
             assertEquals(2, row.size());
             assertEquals("value3", row.get(0));
             assertEquals("value4", row.get(1));
+            assertEquals(1, row.offset());
 
             row = csvReader.nextRow();
             assertNotNull(row);

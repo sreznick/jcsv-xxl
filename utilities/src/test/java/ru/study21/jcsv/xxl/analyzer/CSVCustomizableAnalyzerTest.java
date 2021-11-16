@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.shadow.com.univocity.parsers.csv.Csv;
 import ru.study21.jcsv.xxl.common.BrokenContentsException;
 import ru.study21.jcsv.xxl.common.CSVMeta;
+import ru.study21.jcsv.xxl.common.CSVRow;
 import ru.study21.jcsv.xxl.io.DefaultCSVReader;
 
 import java.io.BufferedReader;
@@ -29,7 +30,7 @@ public class CSVCustomizableAnalyzerTest {
                         int sum = 0;
 
                         @Override
-                        public void acceptRow(List<String> row) {
+                        public void acceptRow(CSVRow row) {
                             sum += Integer.parseInt(row.get(0));
                         }
 
@@ -60,7 +61,7 @@ public class CSVCustomizableAnalyzerTest {
                         int sum = 0;
 
                         @Override
-                        public void acceptRow(List<String> row) {
+                        public void acceptRow(CSVRow row) {
                             sum += Integer.parseInt(row.get(0));
                         }
 
@@ -73,7 +74,7 @@ public class CSVCustomizableAnalyzerTest {
                         int prod = 1;
 
                         @Override
-                        public void acceptRow(List<String> row) {
+                        public void acceptRow(CSVRow row) {
                             prod *= Integer.parseInt(row.get(0));
                         }
 

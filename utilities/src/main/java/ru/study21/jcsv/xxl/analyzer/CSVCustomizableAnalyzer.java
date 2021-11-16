@@ -1,9 +1,9 @@
 package ru.study21.jcsv.xxl.analyzer;
 
 import ru.study21.jcsv.xxl.common.BrokenContentsException;
+import ru.study21.jcsv.xxl.common.CSVRow;
 import ru.study21.jcsv.xxl.io.CSVReader;
 
-import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.*;
 import java.util.function.Function;
@@ -42,14 +42,14 @@ public class CSVCustomizableAnalyzer {
     }
 
     public interface Action<R> {
-        void acceptRow(List<String> row);
+        void acceptRow(CSVRow row);
 
         R getResult();
     }
 
     public List<?> run() throws BrokenContentsException {
         while (true) {
-            List<String> row = _csvReader.nextRow();
+            CSVRow row = _csvReader.nextRow();
             if (row.size() == 0) {
                 break;
             }
@@ -70,7 +70,7 @@ public class CSVCustomizableAnalyzer {
             private BigInteger sum = BigInteger.ZERO;
 
             @Override
-            public void acceptRow(List<String> row) {
+            public void acceptRow(CSVRow row) {
                 sum = sum.add(new BigInteger(row.get(colIndex)));
             }
 
@@ -87,7 +87,7 @@ public class CSVCustomizableAnalyzer {
             private BigInteger count = BigInteger.ZERO;
 
             @Override
-            public void acceptRow(List<String> row) {
+            public void acceptRow(CSVRow row) {
                 sum = sum.add(new BigInteger(row.get(colIndex)));
                 count = count.add(BigInteger.ONE);
             }
@@ -117,7 +117,7 @@ public class CSVCustomizableAnalyzer {
             private final PriorityQueue<T> maxValues = new PriorityQueue<>(comparator);
 
             @Override
-            public void acceptRow(List<String> row) {
+            public void acceptRow(CSVRow row) {
                 maxValues.add(parser.apply(row.get(colIndex)));
                 if (maxValues.size() > nValues) {
                     maxValues.poll();
@@ -146,7 +146,7 @@ public class CSVCustomizableAnalyzer {
                     maxValuesIntAction(colIndex, 1);
 
             @Override
-            public void acceptRow(List<String> row) {
+            public void acceptRow(CSVRow row) {
                 delegate.acceptRow(row);
             }
 

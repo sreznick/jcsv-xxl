@@ -11,6 +11,7 @@ public class DefaultCSVReader implements CSVReader {
     private RecordSupplier _recordSupplier;
     private CSVMeta _meta;
     private List<String> _record;
+    private long _offset;
 
     private DefaultCSVReader(BufferedReader reader, boolean withHeader, char separator)
             throws BrokenContentsException, IOException {
@@ -24,6 +25,7 @@ public class DefaultCSVReader implements CSVReader {
             _record = _recordSupplier.parse(reader);
             _meta = CSVMeta.withoutNames(_record.size());
         }
+        _offset = 0;
     }
 
     public static Builder builder(BufferedReader reader) {
@@ -34,7 +36,7 @@ public class DefaultCSVReader implements CSVReader {
         return _meta;
     }
 
-    public List<String> nextRow() throws BrokenContentsException {
+    public CSVRow nextRow() throws BrokenContentsException {
         List<String> result = _record;
         try {
             _record = _recordSupplier.parse(_reader);
@@ -42,7 +44,7 @@ public class DefaultCSVReader implements CSVReader {
             // TODO: fix it
             throw new RuntimeException(e);
         }
-        return result;
+        return new CSVRow(result, _offset++);
     }
 
     public static class Builder {

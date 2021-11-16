@@ -2,10 +2,11 @@ package ru.study21.jcsv.xxl.io;
 
 import ru.study21.jcsv.xxl.common.BrokenContentsException;
 import ru.study21.jcsv.xxl.common.CSVMeta;
+import ru.study21.jcsv.xxl.common.CSVRow;
 
 import java.util.List;
 
 public interface CSVReader {
     CSVMeta meta();
-    List<String> nextRow() throws BrokenContentsException;
+    CSVRow nextRow() throws BrokenContentsException;
 }
