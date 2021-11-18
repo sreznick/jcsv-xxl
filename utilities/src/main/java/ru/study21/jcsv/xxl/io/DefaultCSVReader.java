@@ -71,6 +71,10 @@ public class DefaultCSVReader implements CSVReader {
             return this;
         }
 
+        public Builder ofType(CSVType csvType) {
+            return (csvType.withHeader() ? withHeader() : withoutHeader()).withSeparator(csvType.separator());
+        }
+
         public DefaultCSVReader build() throws BrokenContentsException, IOException {
             return new DefaultCSVReader(_reader, _withHeader, _separator);
         }

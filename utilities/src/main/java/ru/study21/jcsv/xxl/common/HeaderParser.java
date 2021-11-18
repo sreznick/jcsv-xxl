@@ -10,7 +10,6 @@ public class HeaderParser implements HeaderSupplier {
     /*
      * Very simple and naive.
      *
-     * TODO: implement https://datatracker.ietf.org/doc/html/rfc4180
      */
 
     private final RecordParser _recordParser;

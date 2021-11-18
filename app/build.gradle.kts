@@ -14,5 +14,5 @@ dependencies {
 
 application {
     // Define the main class for the application.
-    mainClass.set("ru.study21.jcsv.xxl.app.App")
+    mainClass.set("ru.study21.jcsv.xxl.app.JCSVXXLApp")
 }
