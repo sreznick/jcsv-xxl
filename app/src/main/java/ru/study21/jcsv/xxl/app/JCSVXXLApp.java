@@ -10,15 +10,13 @@ import java.util.List;
 @Command(
         name = "jcsvxxl",
         subcommands = {
-                SummaryCommand.class
+                SummaryCommand.class,
+                SortCommand.class
         })
 public class JCSVXXLApp {
 
     @Spec
     Model.CommandSpec spec;
-
-    @Parameters(arity = "1..*")
-    List<File> files;
 
     @Option(names = {"-h", "--withHeader"})
     boolean withHeader = false;

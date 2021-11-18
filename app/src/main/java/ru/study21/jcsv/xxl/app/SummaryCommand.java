@@ -10,6 +10,7 @@ import ru.study21.jcsv.xxl.io.DefaultCSVReader;
 
 import java.io.*;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.stream.IntStream;
 
@@ -22,12 +23,15 @@ public class SummaryCommand implements Callable<Integer> {
     @ParentCommand
     private JCSVXXLApp parent;
 
+    @Parameters(arity = "1..*")
+    List<File> files;
+
     @Override
     public Integer call() {
         PrintWriter out = parent.spec.commandLine().getOut();
         PrintWriter err = parent.spec.commandLine().getErr();
 
-        for (File file : parent.files) {
+        for (File file : files) {
             out.println("--- Analyzing file " + file.getName() + " ---");
             try (BufferedReader br = new BufferedReader(new FileReader(file))) {
 

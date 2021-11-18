@@ -38,7 +38,7 @@ class SummaryTest {
 
     @Test
     void testSummary() {
-        new CommandLine(new JCSVXXLApp()).execute("src/test/resources/sample_lf.csv", "-h", "summary");
+        new CommandLine(new JCSVXXLApp()).execute("-h", "summary", "src/test/resources/sample_lf.csv");
         assertEquals("""
                 --- Analyzing file sample_lf.csv ---
                 File summary:
