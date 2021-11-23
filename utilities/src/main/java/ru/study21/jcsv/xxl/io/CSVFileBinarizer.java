@@ -17,7 +17,7 @@ import java.util.function.ToIntFunction;
 public class CSVFileBinarizer {
 
     // supposed to support all types from ColumnType
-    protected static abstract class ColumnTypeBinarizationParams {
+    public static abstract class ColumnTypeBinarizationParams {
     }
 
     public static class IntCTBS extends ColumnTypeBinarizationParams {
@@ -97,7 +97,7 @@ public class CSVFileBinarizer {
         return result;
     }
 
-    protected static int calcSumByteLength(List<ColumnTypeBinarizationParams> params) {
+    public static int calcSumByteLength(List<ColumnTypeBinarizationParams> params) {
         return params.stream().mapToInt(
                 new ToIntFunction<>() { // cannot throw from lambda
                     @Override
@@ -146,7 +146,7 @@ public class CSVFileBinarizer {
                         // therefore simple padding is impossible
                         // solution: add extra byte that determines padding
                         byte[] arr = new BigInteger(elem).toByteArray();
-                        buffer.put((byte) (bigIntCTBS.byteLength - 128));
+                        buffer.put((byte) (arr.length - 128));
                         buffer.put(addPaddingBigEndian(arr, bigIntCTBS.byteLength));
 
                     } else if (params instanceof StringCTBS stringCTBS) {

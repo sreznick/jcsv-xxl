@@ -11,10 +11,12 @@ import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class CSVFileBinarizerTest {
 
@@ -67,8 +69,6 @@ public class CSVFileBinarizerTest {
                 new CSVFileBinarizer.IntCTBS()
         );
 
-        System.out.println(binFile.toString());
-
         CSVFileBinarizer.binarize(inReader, binParams, binFile);
         CSVFileBinarizer.debinarize(binFile, binParams, outWriter);
 
@@ -95,8 +95,6 @@ public class CSVFileBinarizerTest {
                 new CSVFileBinarizer.IntCTBS()
         );
 
-        System.out.println(binFile.toString());
-
         CSVFileBinarizer.binarize(inReader, binParams, binFile);
         CSVFileBinarizer.debinarize(binFile, binParams, outWriter);
 
@@ -120,8 +118,6 @@ public class CSVFileBinarizerTest {
         List<CSVFileBinarizer.ColumnTypeBinarizationParams> binParams = List.of(
                 new CSVFileBinarizer.LongCTBS()
         );
-
-        System.out.println(binFile.toString());
 
         CSVFileBinarizer.binarize(inReader, binParams, binFile);
         CSVFileBinarizer.debinarize(binFile, binParams, outWriter);
@@ -148,8 +144,6 @@ public class CSVFileBinarizerTest {
                 new CSVFileBinarizer.BigIntCTBS(16)
         );
 
-        System.out.println(binFile.toString());
-
         CSVFileBinarizer.binarize(inReader, binParams, binFile);
         CSVFileBinarizer.debinarize(binFile, binParams, outWriter);
 
@@ -174,8 +168,6 @@ public class CSVFileBinarizerTest {
                 new CSVFileBinarizer.StringCTBS(3, StandardCharsets.US_ASCII)
         );
 
-        System.out.println(binFile.toString());
-
         CSVFileBinarizer.binarize(inReader, binParams, binFile);
         CSVFileBinarizer.debinarize(binFile, binParams, outWriter);
 
@@ -197,8 +189,6 @@ public class CSVFileBinarizerTest {
         List<CSVFileBinarizer.ColumnTypeBinarizationParams> binParams = List.of(
                 new CSVFileBinarizer.StringCTBS(3, StandardCharsets.US_ASCII)
         );
-
-        System.out.println(binFile.toString());
 
         CSVFileBinarizer.binarize(inReader, binParams, binFile);
         CSVFileBinarizer.debinarize(binFile, binParams, outWriter);
@@ -225,7 +215,27 @@ public class CSVFileBinarizerTest {
                 new CSVFileBinarizer.StringCTBS(3, StandardCharsets.US_ASCII)
         );
 
-        System.out.println(binFile.toString());
+        CSVFileBinarizer.binarize(inReader, binParams, binFile);
+        CSVFileBinarizer.debinarize(binFile, binParams, outWriter);
+
+        outBufWriter.flush();
+        outReader = DefaultCSVReader.builder(Files.newBufferedReader(csvOutFile)).withoutHeader().build();
+
+        for (List<String> row : data) {
+            assertEquals(row, outReader.nextRow());
+        }
+        assertEquals(0, outReader.nextRow().size());
+    }
+
+    @Test
+    public void testSingleColumnIntValues() throws BrokenContentsException, IOException {
+        List<List<String>> data = IntStream.range(-1024, 1024)
+                .mapToObj(i -> List.of(String.valueOf(i)))
+                .collect(Collectors.toList());
+        writeData(data);
+        List<CSVFileBinarizer.ColumnTypeBinarizationParams> binParams = List.of(
+                new CSVFileBinarizer.IntCTBS()
+        );
 
         CSVFileBinarizer.binarize(inReader, binParams, binFile);
         CSVFileBinarizer.debinarize(binFile, binParams, outWriter);
@@ -237,6 +247,41 @@ public class CSVFileBinarizerTest {
             assertEquals(row, outReader.nextRow());
         }
         assertEquals(0, outReader.nextRow().size());
+    }
+
+    @Test
+    public void testSingleColumnBigintValues() throws BrokenContentsException, IOException {
+        List<List<String>> data = IntStream.range(-1024, 1024)
+                .mapToObj(i -> List.of(String.valueOf(i)))
+                .collect(Collectors.toList());
+        writeData(data);
+        List<CSVFileBinarizer.ColumnTypeBinarizationParams> binParams = List.of(
+                new CSVFileBinarizer.BigIntCTBS(2)
+        );
+
+        CSVFileBinarizer.binarize(inReader, binParams, binFile);
+        CSVFileBinarizer.debinarize(binFile, binParams, outWriter);
+
+        outBufWriter.flush();
+        outReader = DefaultCSVReader.builder(Files.newBufferedReader(csvOutFile)).withoutHeader().build();
+
+        for (List<String> row : data) {
+            assertEquals(row, outReader.nextRow());
+        }
+        assertEquals(0, outReader.nextRow().size());
+    }
+
+    @Test
+    public void testSingleColumnBigintTooLarge() throws BrokenContentsException, IOException {
+        List<List<String>> data = List.of(
+                List.of("999999999999999999")
+        );
+        writeData(data);
+        List<CSVFileBinarizer.ColumnTypeBinarizationParams> binParams = List.of(
+                new CSVFileBinarizer.BigIntCTBS(3)
+        );
+
+        assertThrows(IllegalArgumentException.class, () -> CSVFileBinarizer.binarize(inReader, binParams, binFile));
     }
 
 }
