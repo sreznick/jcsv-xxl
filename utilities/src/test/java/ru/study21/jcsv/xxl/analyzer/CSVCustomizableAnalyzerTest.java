@@ -29,7 +29,7 @@ public class CSVCustomizableAnalyzerTest {
         try (BufferedReader reader = new BufferedReader(new StringReader(text))) {
             DefaultCSVReader csvReader = DefaultCSVReader.builder(reader).withHeader().build();
             CSVCustomizableAnalyzer analyzer = CSVCustomizableAnalyzer.builder(csvReader)
-                    .addAction(new CSVCustomizableAnalyzer.Action<Integer>() {
+                    .addAction(new AnalyzerActions.Action<Integer>() {
                         int sum = 0;
 
                         @Override
@@ -65,7 +65,7 @@ public class CSVCustomizableAnalyzerTest {
         try (BufferedReader reader = new BufferedReader(new StringReader(text))) {
             DefaultCSVReader csvReader = DefaultCSVReader.builder(reader).withHeader().build();
             CSVCustomizableAnalyzer analyzer = CSVCustomizableAnalyzer.builder(csvReader)
-                    .addAction(new CSVCustomizableAnalyzer.Action<Integer>() {
+                    .addAction(new AnalyzerActions.Action<Integer>() {
                         int sum = 0;
 
                         @Override
@@ -81,7 +81,7 @@ public class CSVCustomizableAnalyzerTest {
                         @Override
                         public void finish() {}
                     })
-                    .addAction(new CSVCustomizableAnalyzer.Action<Integer>() {
+                    .addAction(new AnalyzerActions.Action<Integer>() {
                         int prod = 1;
 
                         @Override
@@ -115,11 +115,11 @@ public class CSVCustomizableAnalyzerTest {
         try (BufferedReader reader = new BufferedReader(new StringReader(text))) {
             DefaultCSVReader csvReader = DefaultCSVReader.builder(reader).withHeader().build();
             CSVCustomizableAnalyzer analyzer = CSVCustomizableAnalyzer.builder(csvReader)
-                    .addAction(CSVCustomizableAnalyzer.maxIntAction(0))
-                    .addAction(CSVCustomizableAnalyzer.sumAction(0))
-                    .addAction(CSVCustomizableAnalyzer.maxValuesAction(
+                    .addAction(AnalyzerActions.maxIntAction(0))
+                    .addAction(AnalyzerActions.sumAction(0))
+                    .addAction(AnalyzerActions.maxValuesAction(
                             1, 2, String::compareTo, Function.identity()))
-                    .addAction(CSVCustomizableAnalyzer.averageAction(0))
+                    .addAction(AnalyzerActions.averageAction(0))
                     .build();
 
             List<?> result = analyzer.run();
@@ -142,7 +142,7 @@ public class CSVCustomizableAnalyzerTest {
             Path offsetsPath = fileManager.createTempFileWithSuffix("offsets", "csv");
             BufferedWriter writer = new BufferedWriter(new FileWriter(offsetsPath.toFile()));
             CSVCustomizableAnalyzer analyzer = CSVCustomizableAnalyzer.builder(csvReader)
-                    .addAction(CSVCustomizableAnalyzer.offsetsWriteAction(writer, 1))
+                    .addAction(AnalyzerActions.columnWithLineNumWriteAction(writer, 1))
                     .build();
 
             List<?> result = analyzer.run();
@@ -162,25 +162,6 @@ public class CSVCustomizableAnalyzerTest {
     }
 
     @Test
-    void testWithOffsetsSizeActions() {
-        String text = "name,time,text\ntwo,2,second\none,\"1\",first\nthree,3,third\nfour,4,fourth\n";
-
-        try (BufferedReader reader = new BufferedReader(new StringReader(text))) {
-            DefaultCSVReader csvReader = DefaultCSVReader.builder(reader).withHeader().build();
-            CSVCustomizableAnalyzer analyzer = CSVCustomizableAnalyzer.builder(csvReader)
-                    .addAction(CSVCustomizableAnalyzer.withOffsetsSizeAction(2))
-                    .build();
-
-            List<?> result = analyzer.run();
-
-            assertNotNull(result);
-            assertIterableEquals(List.of(278L), result);
-        } catch (IOException | BrokenContentsException e) {
-            Assertions.fail("Unexpected " + e);
-        }
-    }
-
-    @Test
     void testSubRowActions() {
         String text = "name,time,text\ntwo,2,second\none,\"1\",first\nthree,3,third\nfour,4,fourth\n";
 
@@ -188,7 +169,7 @@ public class CSVCustomizableAnalyzerTest {
             DefaultCSVReader csvReader = DefaultCSVReader.builder(reader).withHeader().build();
             List<Integer> colIndexes = Arrays.asList(0, 2);
             CSVCustomizableAnalyzer analyzer = CSVCustomizableAnalyzer.builder(csvReader)
-                    .addAction(CSVCustomizableAnalyzer.subRowAction(colIndexes))
+                    .addAction(AnalyzerActions.subRowAction(colIndexes))
                     .build();
 
             List<?> result = analyzer.run();
