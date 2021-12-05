@@ -1,17 +1,16 @@
 package ru.study21.jcsv.xxl.app;
 
 import picocli.CommandLine;
+
 import static picocli.CommandLine.*;
 
-import java.io.File;
-import java.io.PrintWriter;
-import java.util.List;
 
 @Command(
         name = "jcsvxxl",
         subcommands = {
                 SummaryCommand.class,
-                SortCommand.class
+                SortCommand.class,
+                DiffCommand.class
         })
 public class JCSVXXLApp {
 

@@ -49,9 +49,6 @@ public class CSVTable {
     }
 
     public long cellAsLong(int row, int column) {
-        System.out.println("row: " + row);
-        System.out.println("col: " + column);
-        System.out.println("value: <" + cell(row, column) + ">");
         return Long.parseLong(cell(row, column));
     }
 
