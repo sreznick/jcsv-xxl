@@ -2,7 +2,6 @@ package ru.study21.jcsv.xxl.io;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -12,7 +11,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.List;
 
-public class KwayMergeFileNioReaderWriterTest {
+public class MultiregionCachedNioBinaryReaderTest {
 
     @Test
     public void testBasic() throws IOException {
@@ -21,14 +20,14 @@ public class KwayMergeFileNioReaderWriterTest {
         byte[] data = new byte[]{3, 3, 2, 2, 1, 1, 4, 4, 4};
         Files.write(path, data);
 
-        KwayMergeFileNioReaderWriter.setCacheSize(4);
+        MultiregionCachedNioBinaryReader.setCacheSize(4);
 
         SeekableByteChannel binChannel = Files.newByteChannel(path, StandardOpenOption.READ, StandardOpenOption.WRITE);
-        KwayMergeFileNioReaderWriter thing = new KwayMergeFileNioReaderWriter(binChannel, List.of(
-                new KwayMergeFileNioReaderWriter.Region(0, 2),
-                new KwayMergeFileNioReaderWriter.Region(2, 2),
-                new KwayMergeFileNioReaderWriter.Region(4, 2),
-                new KwayMergeFileNioReaderWriter.Region(6, 3)
+        MultiregionCachedNioBinaryReader thing = new MultiregionCachedNioBinaryReader(binChannel, List.of(
+                new MultiregionCachedNioBinaryReader.Region(0, 2),
+                new MultiregionCachedNioBinaryReader.Region(2, 2),
+                new MultiregionCachedNioBinaryReader.Region(4, 2),
+                new MultiregionCachedNioBinaryReader.Region(6, 3)
         ));
 
         byte[] arr = new byte[2];
@@ -49,14 +48,6 @@ public class KwayMergeFileNioReaderWriterTest {
 
         assertEquals(0, thing.read(arr, 0));
         assertEquals(0, thing.read(br, 3));
-
-        byte[] c = new byte[]{7, 7, 7, 7, 7, 7, 7, 7, 7};
-        thing.write(c);
-
-        thing.close();
-        binChannel.close();
-
-        assertArrayEquals(c, Files.readAllBytes(path));
     }
 
 }

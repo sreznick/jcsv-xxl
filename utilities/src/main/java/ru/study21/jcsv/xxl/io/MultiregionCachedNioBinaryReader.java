@@ -8,15 +8,13 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-public class KwayMergeFileNioReaderWriter implements AutoCloseable {
+public class MultiregionCachedNioBinaryReader implements AutoCloseable {
 
-    private final SeekableByteChannel binChannel;
+    private SeekableByteChannel binChannel;
 
     // read from given positions given lengths
     // write to autoincr position sequentially
 
-    private final ByteBuffer writeCache;
-    private long writePos;
     private final List<ByteBuffer> readCaches = new ArrayList<>();
     private final List<Region> regions;
     private final List<Long> regionsPos;
@@ -36,8 +34,7 @@ public class KwayMergeFileNioReaderWriter implements AutoCloseable {
     }
 
     // Channel is required to be both readable and writeable
-    public KwayMergeFileNioReaderWriter(SeekableByteChannel binChannel, List<Region> regions) {
-        writeCache = ByteBuffer.allocate(CACHE_SIZE);
+    public MultiregionCachedNioBinaryReader(SeekableByteChannel binChannel, List<Region> regions) {
         for (int i = 1; i < regions.size(); i++) {
             if (!regions.get(i - 1).isConsecutive(regions.get(i))) {
                 throw new IllegalArgumentException("only consecutive regions are supported");
@@ -47,7 +44,6 @@ public class KwayMergeFileNioReaderWriter implements AutoCloseable {
                 readCaches.add(ByteBuffer.allocate(CACHE_SIZE)));
         this.regions = regions;
 
-        writePos = regions.get(0).start;
         regionsPos = regions.stream().map(Region::start).collect(Collectors.toCollection(ArrayList::new));
         this.binChannel = binChannel;
         didInit = new boolean[regions.size()];
@@ -62,6 +58,9 @@ public class KwayMergeFileNioReaderWriter implements AutoCloseable {
     }
 
     public int read(byte[] arr, int region) throws IOException {
+        if (binChannel == null) {
+            throw new IllegalStateException("cannot read after close");
+        }
         Region curRegion = regions.get(region);
         int logicLen = Math.toIntExact(Math.min(
                 arr.length,
@@ -97,30 +96,9 @@ public class KwayMergeFileNioReaderWriter implements AutoCloseable {
         return logicLen;
     }
 
-    private void flushWriteCache() throws IOException {
-        writeCache.flip();
-        binChannel.position(writePos);
-        int len = binChannel.write(writeCache);
-        writePos += len;
-        writeCache.clear();
-    }
-
-    public void write(byte[] arr) throws IOException {
-        int done = 0;
-        while (done < arr.length) {
-            int len = Math.min(arr.length - done, writeCache.remaining());
-            if (len == 0) { // does not do an extra flush when done == arr.length
-                flushWriteCache();
-                continue;
-            }
-            writeCache.put(arr, done, len);
-            done += len;
-        }
-    }
-
     @Override
-    public void close() throws IOException {
-        flushWriteCache();
+    public void close() {
+        binChannel = null;
     }
 
 }
