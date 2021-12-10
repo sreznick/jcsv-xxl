@@ -43,6 +43,8 @@ public class DiffCommand implements Callable<Integer> {
 
             if (editScript) {
                 myersDiff.editScript(firstTable, secondTable, out);
+            } else {
+                myersDiff.diff(firstTable, secondTable, out);
             }
 
         } catch (BrokenContentsException e) {

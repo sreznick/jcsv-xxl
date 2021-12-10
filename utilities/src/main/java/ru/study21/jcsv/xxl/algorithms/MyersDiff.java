@@ -27,9 +27,8 @@ public class MyersDiff {
     public static record Operation(OperationType type, String content) {
     }
 
-    public static void getPoints(int x, int y, List<Point> result) {
-        Point prev = result.get(result.size() - 1);
-        int xPrev = prev.x, yPrev = prev.y;
+    private void addPointsBetweenTwoPointsToList(int x, int y, Point prevPoint, List<Point> result) {
+        int xPrev = prevPoint.x, yPrev = prevPoint.y;
 
         while (x != xPrev || y != yPrev) {
             if (x < xPrev && y < yPrev) {
@@ -45,18 +44,13 @@ public class MyersDiff {
     }
 
     private List<Point> getShortestPath(List<int[]> steps, int d, int k, int length) {
+        int x = steps.get(d)[(k + length) % length];
+        int y = x - k;
+
         List<Point> path = new ArrayList<>();
+        path.add(new Point(x, y));
 
         for (; d > 0; d--) {
-            int x = steps.get(d)[(k + length) % length];
-            int y = x - k;
-
-            if (!path.isEmpty()) {
-                getPoints(x, y, path);
-            } else {
-                path.add(new Point(x, y));
-            }
-
             if (k == -d) {
                 k++;
             } else if (k == d) {
@@ -68,9 +62,13 @@ public class MyersDiff {
                     k--;
                 }
             }
+
+            x = steps.get(d)[(k + length) % length];
+            y = x - k;
+
+            addPointsBetweenTwoPointsToList(x, y, path.get(path.size() - 1), path);
         }
-        getPoints(steps.get(d)[(k + length) % length], steps.get(d)[(k + length) % length] - k, path);
-        getPoints(0, 0, path);
+        addPointsBetweenTwoPointsToList(0, 0, path.get(path.size() - 1), path);
 
         Collections.reverse(path);
 
@@ -134,14 +132,8 @@ public class MyersDiff {
 
                 int kPrev = down ? secondIndexInArray : firstIndexInArray;
 
-                int xStart = nextStep[kPrev];
-                int yStart = xStart - kPrev;
-
-                int xMid = down ? xStart : xStart + 1;
-                int yMid = xMid - k;
-
-                int xEnd = xMid;
-                int yEnd = yMid;
+                int xEnd = down ? nextStep[kPrev] : nextStep[kPrev] + 1;
+                int yEnd = xEnd - k;
 
                 while (xEnd < firstCSVTableSize && yEnd < secondCSVTableSize &&
                         equalsLine(firstCSVTable, secondCSVTable, xEnd, yEnd, _keys)) {
@@ -174,22 +166,20 @@ public class MyersDiff {
                 if (nextPoint.equals(prevPoint)) {
                     continue;
                 }
+                StringBuilder nextLine = new StringBuilder();
                 if (prevPoint.x < nextPoint.x && prevPoint.y < nextPoint.y) {
-                    StringBuilder nextLine = new StringBuilder();
                     for (int i = 0; i < firstTable.meta().size() - 1; i++) {
                         nextLine.append(firstTable.cell(prevPoint.x, i)).append(',');
                     }
                     nextLine.append(firstTable.cell(prevPoint.x, firstTable.meta().size() - 1));
                     operations.add(new Operation(OperationType.TAKE, nextLine.toString()));
                 } else if (prevPoint.x < nextPoint.x) {
-                    StringBuilder nextLine = new StringBuilder();
-                    for (int i = 0; i < firstTable.meta().size(); i++) {
+                    for (int i = 0; i < firstTable.meta().size() - 1; i++) {
                         nextLine.append(firstTable.cell(prevPoint.x, i)).append(',');
                     }
                     nextLine.append(firstTable.cell(prevPoint.x, firstTable.meta().size() - 1));
                     operations.add(new Operation(OperationType.DELETE, nextLine.toString()));
                 } else {
-                    StringBuilder nextLine = new StringBuilder();
                     for (int i = 0; i < firstTable.meta().size() - 1; i++) {
                         nextLine.append(secondTable.cell(prevPoint.y, i)).append(',');
                     }
