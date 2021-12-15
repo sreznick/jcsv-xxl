@@ -18,13 +18,13 @@ public class MyersDiff {
         this._keys = _keys;
     }
 
-    public static record KeyInfo(int field, KeyType keyType) {
+    public record KeyInfo(int field, KeyType keyType) {
     }
 
-    public static record Point(int x, int y) {
+    private record Point(int x, int y) {
     }
 
-    public static record Operation(OperationType type, String content) {
+    private record Operation(OperationType type, String content) {
     }
 
     private void addPointsBetweenTwoPointsToList(int x, int y, Point prevPoint, List<Point> result) {
