@@ -5,7 +5,6 @@ import ru.study21.jcsv.xxl.data.CSVTable;
 
 import java.io.PrintWriter;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 public class MyersDiff {
@@ -24,55 +23,29 @@ public class MyersDiff {
     private record Point(int x, int y) {
     }
 
+    private record Interval(int start, int end) {
+        public int size() {
+            return end - start;
+        }
+    }
+
     private record Operation(OperationType type, String content) {
     }
 
     private void addPointsBetweenTwoPointsToList(int x, int y, Point prevPoint, List<Point> result) {
-        int xPrev = prevPoint.x, yPrev = prevPoint.y;
+        int xNext = prevPoint.x, yNext = prevPoint.y;
 
-        while (x != xPrev || y != yPrev) {
-            if (x < xPrev && y < yPrev) {
-                xPrev--;
-                yPrev--;
-            } else if (x < xPrev) {
-                xPrev--;
+        while (xNext != x || yNext != y) {
+            if (xNext < x && yNext < y) {
+                xNext++;
+                yNext++;
+            } else if (xNext < x) {
+                xNext++;
             } else {
-                yPrev--;
+                yNext++;
             }
-            result.add(new Point(xPrev, yPrev));
+            result.add(new Point(xNext, yNext));
         }
-    }
-
-    private List<Point> getShortestPath(List<int[]> steps, int d, int k, int length) {
-        int x = steps.get(d)[(k + length) % length];
-        int y = x - k;
-
-        List<Point> path = new ArrayList<>();
-        path.add(new Point(x, y));
-
-        for (; d > 0; d--) {
-            if (k == -d) {
-                k++;
-            } else if (k == d) {
-                k--;
-            } else {
-                if (steps.get(d - 1)[(k - 1 + length) % length] < steps.get(d - 1)[(k + 1 + length) % length]) {
-                    k++;
-                } else {
-                    k--;
-                }
-            }
-
-            x = steps.get(d)[(k + length) % length];
-            y = x - k;
-
-            addPointsBetweenTwoPointsToList(x, y, path.get(path.size() - 1), path);
-        }
-        addPointsBetweenTwoPointsToList(0, 0, path.get(path.size() - 1), path);
-
-        Collections.reverse(path);
-
-        return path;
     }
 
     private boolean equalsLine(CSVTable firstCSVTable, CSVTable secondCSVTable,
@@ -103,59 +76,158 @@ public class MyersDiff {
         return true;
     }
 
-    private void init(CSVTable firstCSVTable, CSVTable secondCSVTable) {
-        int firstCSVTableSize = firstCSVTable.size();
-        int secondCSVTableSize = secondCSVTable.size();
+    private List<Point> getMiddleSnake(CSVTable firstCSVTable, CSVTable secondCSVTable, Interval firstInterval,
+                                       Interval secondInterval) {
+        int firstIntervalSize = firstInterval.size();
+        int secondIntervalSize = secondInterval.size();
+        int delta = firstIntervalSize - secondIntervalSize;
 
-        int[] nextStep = new int[2 * (firstCSVTableSize + secondCSVTableSize) + 1];
-        nextStep[1] = 0;
+        int[] forward = new int[2 * (firstIntervalSize + secondIntervalSize) + 1];
+        int[] backward = new int[2 * (firstIntervalSize + secondIntervalSize) + 1];
+        backward[0] = firstIntervalSize;
+        backward[(delta - 1 + backward.length) % backward.length] = firstIntervalSize;
 
-        List<int[]> steps = new ArrayList<>();
-
-        int d, k = 0;
-        for (d = 0; d <= firstCSVTableSize + secondCSVTableSize; d++) {
-            boolean end = false;
-
-            for (k = -d; k <= d; k += 2) {
+        for (int d = 0; d <= Math.ceil((firstIntervalSize + secondIntervalSize) / 2.0); d++) {
+            for (int k = -d; k <= d; k += 2) {
                 boolean down;
 
-                int firstIndexInArray = (k - 1 + nextStep.length) % nextStep.length;
-                int secondIndexInArray = (k + 1 + nextStep.length) % nextStep.length;
+                final int firstIndexInArray = (k - 1 + forward.length) % forward.length;
+                final int secondIndexInArray = (k + 1 + forward.length) % forward.length;
 
                 if (k == -d) {
                     down = true;
                 } else if (k == d) {
                     down = false;
                 } else {
-                    down = nextStep[firstIndexInArray] < nextStep[secondIndexInArray];
+                    down = forward[firstIndexInArray] < forward[secondIndexInArray];
                 }
 
                 int kPrev = down ? secondIndexInArray : firstIndexInArray;
 
-                int xEnd = down ? nextStep[kPrev] : nextStep[kPrev] + 1;
-                int yEnd = xEnd - k;
+                int xStart = forward[kPrev];
+                int yStart = xStart - (down ? k + 1 : k - 1);
 
-                while (xEnd < firstCSVTableSize && yEnd < secondCSVTableSize &&
-                        equalsLine(firstCSVTable, secondCSVTable, xEnd, yEnd, _keys)) {
+                int xMid = down ? xStart : xStart + 1;
+                int yMid = xMid - k;
+
+                int xEnd = xMid;
+                int yEnd = yMid;
+
+                while (xEnd < firstIntervalSize && yEnd < secondIntervalSize &&
+                        equalsLine(firstCSVTable, secondCSVTable, xEnd + firstInterval.start,
+                                yEnd + secondInterval.start, _keys)) {
                     xEnd++;
                     yEnd++;
                 }
 
-                nextStep[(k + nextStep.length) % nextStep.length] = xEnd;
+                forward[(k + forward.length) % forward.length] = xEnd;
 
-                if (xEnd >= firstCSVTableSize && yEnd >= secondCSVTableSize) {
-                    end = true;
-                    break;
+                if (Math.abs(delta) % 2 == 1 && (k >= delta - (d - 1) && k <= delta + (d - 1)) &&
+                        backward[(k + backward.length) % backward.length] <= xEnd) {
+                    if (yStart < 0) {
+                        yStart++;
+                    }
+
+                    List<Point> result = new ArrayList<>();
+
+                    result.add(new Point(xStart + firstInterval.start, yStart + secondInterval.start));
+                    result.add(new Point(xMid + firstInterval.start, yMid + secondInterval.start));
+                    result.add(new Point(xEnd + firstInterval.start, yEnd + secondInterval.start));
+
+                    return result;
                 }
             }
-            if (end) {
-                steps.add(nextStep);
-                break;
+
+            for (int k = d + delta; k >= -d + delta; k -= 2) {
+                boolean up;
+
+                int firstIndexInArray = (k - 1 + backward.length) % backward.length;
+                int secondIndexInArray = (k + 1 + backward.length) % backward.length;
+
+                if (k == d + delta) {
+                    up = true;
+                } else if (k == -d + delta) {
+                    up = false;
+                } else {
+                    up = backward[firstIndexInArray] < backward[secondIndexInArray];
+                }
+
+                int kPrev = up ? firstIndexInArray : secondIndexInArray;
+
+                int xStart = backward[kPrev];
+                int yStart = xStart - (up ? k - 1 : k + 1);
+
+                int xMid = up ? xStart : xStart - 1;
+                int yMid = xMid - k;
+
+                int xEnd = xMid;
+                int yEnd = yMid;
+
+                while (xEnd > 0 && yEnd > 0 &&
+                        equalsLine(firstCSVTable, secondCSVTable, xEnd - 1 + firstInterval.start,
+                                yEnd - 1 + secondInterval.start, _keys)) {
+                    xEnd--;
+                    yEnd--;
+                }
+
+                backward[(k + backward.length) % backward.length] = xEnd;
+
+                if (delta % 2 == 0 && (k >= -d && k <= d) && xEnd <= forward[(k + forward.length) % forward.length]) {
+                    if (yStart > secondIntervalSize) {
+                        yStart--;
+                    }
+
+                    List<Point> result = new ArrayList<>();
+
+                    result.add(new Point(xEnd + firstInterval.start, yEnd + secondInterval.start));
+                    result.add(new Point(xMid + firstInterval.start, yMid + secondInterval.start));
+                    result.add(new Point(xStart + firstInterval.start, yStart + secondInterval.start));
+
+                    return result;
+                }
             }
-            steps.add(nextStep.clone());
+        }
+        return new ArrayList<>();
+    }
+
+    private List<Point> linearSpaceDiff(CSVTable firstCSVTable, CSVTable secondCSVTable, Interval firstInterval,
+                                        Interval secondInterval) {
+        if (firstInterval.size() == 0 || secondInterval.size() == 0) {
+            return new ArrayList<>();
         }
 
-        _shortestPath = getShortestPath(steps, d, k, nextStep.length);
+        List<Point> middleSnake = getMiddleSnake(firstCSVTable, secondCSVTable, firstInterval, secondInterval);
+        if (middleSnake.get(0).x == 0 && middleSnake.get(0).y == 0 &&
+                middleSnake.get(middleSnake.size() - 1).x == firstInterval.size() &&
+                middleSnake.get(middleSnake.size() - 1).y == secondInterval.size()) {
+            return middleSnake;
+        }
+
+        List<Point> beforeMiddleSnake = linearSpaceDiff(firstCSVTable, secondCSVTable,
+                new Interval(firstInterval.start, middleSnake.get(0).x),
+                new Interval(secondInterval.start, middleSnake.get(0).y));
+
+        List<Point> afterMiddleSnake = linearSpaceDiff(firstCSVTable, secondCSVTable,
+                new Interval(middleSnake.get(middleSnake.size() - 1).x, firstInterval.end),
+                new Interval(middleSnake.get(middleSnake.size() - 1).y, secondInterval.end));
+
+        beforeMiddleSnake.addAll(middleSnake);
+        beforeMiddleSnake.addAll(afterMiddleSnake);
+
+        return beforeMiddleSnake;
+    }
+
+    private void init(CSVTable firstCSVTable, CSVTable secondCSVTable) {
+        List<Point> result = linearSpaceDiff(firstCSVTable, secondCSVTable, new Interval(0, firstCSVTable.size()),
+                new Interval(0, secondCSVTable.size()));
+        List<Point> answer = new ArrayList<>();
+        answer.add(new Point(0, 0));
+        for (Point point : result) {
+            addPointsBetweenTwoPointsToList(point.x, point.y, answer.get(answer.size() - 1), answer);
+        }
+        addPointsBetweenTwoPointsToList(firstCSVTable.size(), secondCSVTable.size(), answer.get(answer.size() - 1), answer);
+
+        _shortestPath = answer;
     }
 
     private List<Operation> getOperations(CSVTable firstTable, CSVTable secondTable, List<Point> points) {

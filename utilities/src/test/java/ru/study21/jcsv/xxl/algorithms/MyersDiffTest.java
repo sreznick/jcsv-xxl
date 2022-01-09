@@ -86,10 +86,10 @@ public class MyersDiffTest {
                             7a
                             five
                             .
-                            7a
-                            six
+                            7d
+                            5a
+                            seven
                             .
-                            6d
                             5d
                             4d
                             3d
@@ -128,9 +128,9 @@ public class MyersDiffTest {
                             DELETE three
                             DELETE four
                             DELETE five
-                            DELETE six
-                            TAKE seven
-                            ADD six
+                            ADD seven
+                            TAKE six
+                            DELETE seven
                             ADD five
                             ADD four
                             ADD three
