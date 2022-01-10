@@ -1,5 +1,7 @@
 package ru.study21.jcsv.xxl.algorithms;
 
+import java.math.BigInteger;
+import java.util.Comparator;
 import java.util.List;
 
 public record SortDescription(List<KeyElement> keys) {
@@ -39,5 +41,33 @@ public record SortDescription(List<KeyElement> keys) {
 
     public static SortDescription of(int field, KeyType key) {
         return of(List.of(new KeyElement(field, key, Order.ASCENDING)));
+    }
+
+    public Comparator<List<String>> toRowComparator() {
+        return (r1, r2) -> {
+            for (KeyElement key : keys) {
+                int cmpResult;
+                switch (key.keyType()) {
+                    case LONG -> {
+                        cmpResult = Long.compare(
+                                Long.parseLong(r1.get(key.field)),
+                                Long.parseLong(r2.get(key.field))
+                        );
+                    }
+                    case STRING -> {
+                        cmpResult = r1.get(key.field).compareTo(r2.get(key.field));
+                    }
+                    case BIG_INTEGER -> {
+                        cmpResult = new BigInteger(r1.get(key.field))
+                                .compareTo(new BigInteger(r2.get(key.field)));
+                    }
+                    default -> throw new IllegalStateException("Internal error");
+                }
+                if (cmpResult != 0) {
+                    return cmpResult;
+                }
+            }
+            return 0;
+        };
     }
 }
