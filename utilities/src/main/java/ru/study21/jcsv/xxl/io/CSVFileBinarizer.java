@@ -32,11 +32,12 @@ public class CSVFileBinarizer {
 
     // if a number cannot fit into byteLength, an IllegalArgumentException is thrown
     public static class BigIntCTBS extends ColumnTypeBinarizationParams {
-        private final int byteLength;
+        protected final int byteLength;
 
         public BigIntCTBS(int byteLength) {
             if (byteLength > 256) {
                 throw new IllegalArgumentException("such large numbers are not supported"); // TODO ?
+                // 2^256 is basically # of atoms in the observable Universe
             }
             this.byteLength = byteLength;
         }
@@ -45,9 +46,9 @@ public class CSVFileBinarizer {
     // if a string is longer than charsLength, it is cut to that length
     // if a string starts with NUL, it will be removed while reading from binary
     public static class StringCTBS extends ColumnTypeBinarizationParams {
-        private final int charsLength;
-        private final Charset tempCharset;
-        private final int bytesPerChar;
+        protected final int charsLength;
+        protected final Charset tempCharset;
+        protected final int bytesPerChar;
 
         public StringCTBS(int charsLength, Charset tempCharset) {
             this.charsLength = charsLength;
@@ -98,7 +99,11 @@ public class CSVFileBinarizer {
     }
 
     public static int calcSumByteLength(List<ColumnTypeBinarizationParams> params) {
-        return params.stream().mapToInt(
+        return calcOffset(params, params.size());
+    }
+
+    public static int calcOffset(List<ColumnTypeBinarizationParams> params, int index) {
+        return params.stream().limit(index).mapToInt(
                 new ToIntFunction<>() { // cannot throw from lambda
                     @Override
                     public int applyAsInt(ColumnTypeBinarizationParams params) {

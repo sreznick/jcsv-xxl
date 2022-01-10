@@ -96,6 +96,16 @@ public class MultiregionCachedNioBinaryReader implements AutoCloseable {
         return logicLen;
     }
 
+    public boolean isOver(int region) {
+        Region r = regions.get(region);
+        return regionsPos.get(region) >= r.start + r.len;
+    }
+
+    // sanity check
+    public long regionLenSum() {
+        return regions.stream().mapToLong(MultiregionCachedNioBinaryReader.Region::len).sum();
+    }
+
     @Override
     public void close() {
         binChannel = null;
