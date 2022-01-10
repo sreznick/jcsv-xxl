@@ -82,8 +82,8 @@ public class MyersDiff {
         int secondIntervalSize = secondInterval.size();
         int delta = firstIntervalSize - secondIntervalSize;
 
-        int[] forward = new int[2 * (firstIntervalSize + secondIntervalSize) + 1];
-        int[] backward = new int[2 * (firstIntervalSize + secondIntervalSize) + 1];
+        int[] forward = new int[2 * Math.min(firstIntervalSize, secondIntervalSize) + 2];
+        int[] backward = new int[2 * Math.min(firstIntervalSize, secondIntervalSize) + 2];
         backward[0] = firstIntervalSize;
         backward[(delta - 1 + backward.length) % backward.length] = firstIntervalSize;
 
