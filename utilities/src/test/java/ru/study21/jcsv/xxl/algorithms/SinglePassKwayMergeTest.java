@@ -64,7 +64,7 @@ public class SinglePassKwayMergeTest {
             ));
             CachedNioBinaryWriter binaryWriter = new CachedNioBinaryWriter(outputBinChannel);
 
-            merger.singlePassKwayMerge(
+            merger.doKwayMerge(
                     binaryReader,
                     binaryWriter,
                     3,
@@ -86,6 +86,107 @@ public class SinglePassKwayMergeTest {
                     0, 0, 0, 8, 'c', 'c'
             }, Files.readAllBytes(outputBinPath));
         }
+    }
+
+    @Test
+    public void testMultipleRegions() throws IOException {
+        FileManager fm = FileManager.createTempDirectory("SinglePassKwayMergeTest");
+
+        Path inputBinPath = fm.createTempFile("binary");
+        Path outputBinPath = fm.createTempFile("output");
+
+        byte[] input = new byte[]{
+                'g', 'h',
+                'e', 'f',
+                'c', 'd',
+                'a', 'b'
+        };
+        Files.write(inputBinPath, input, StandardOpenOption.WRITE);
+
+        CSVFileBinarizer.StringCTBS stringCTBS = new CSVFileBinarizer.StringCTBS(1, StandardCharsets.US_ASCII);
+        SortDescription sd = SortDescription.of(SortDescription.asString(0));
+        ExternalKwayMerge merger = new ExternalKwayMerge(List.of(stringCTBS, stringCTBS), sd);
+
+        // clear output file
+        Files.write(outputBinPath, new byte[]{}, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
+
+        try (
+                SeekableByteChannel inputBinChannel = Files.newByteChannel(inputBinPath,
+                        StandardOpenOption.READ);
+                SeekableByteChannel outputBinChannel = Files.newByteChannel(outputBinPath,
+                        StandardOpenOption.WRITE)
+        ) {
+            // first half
+            MultiregionCachedNioBinaryReader binaryReader1 = new MultiregionCachedNioBinaryReader(inputBinChannel, List.of(
+                    new MultiregionCachedNioBinaryReader.Region(0, 2),
+                    new MultiregionCachedNioBinaryReader.Region(2, 2)
+            ));
+            CachedNioBinaryWriter binaryWriter1 = new CachedNioBinaryWriter(outputBinChannel);
+
+            merger.doKwayMerge(
+                    binaryReader1,
+                    binaryWriter1,
+                    2,
+                    1
+            );
+            binaryWriter1.close();
+        }
+
+        try (
+                SeekableByteChannel inputBinChannel = Files.newByteChannel(inputBinPath,
+                        StandardOpenOption.READ);
+                SeekableByteChannel outputBinChannel = Files.newByteChannel(outputBinPath,
+                        StandardOpenOption.WRITE, StandardOpenOption.APPEND)
+        ) {
+            //second half
+            MultiregionCachedNioBinaryReader binaryReader2 = new MultiregionCachedNioBinaryReader(inputBinChannel, List.of(
+                    new MultiregionCachedNioBinaryReader.Region(4, 2),
+                    new MultiregionCachedNioBinaryReader.Region(6, 2)
+            ));
+            CachedNioBinaryWriter binaryWriter2 = new CachedNioBinaryWriter(outputBinChannel);
+
+            merger.doKwayMerge(
+                    binaryReader2,
+                    binaryWriter2,
+                    2,
+                    1
+            );
+            binaryWriter2.close();
+        }
+
+        // check before third merge
+        Assertions.assertArrayEquals(new byte[]{
+                'e', 'f', 'g', 'h',
+                'a', 'b', 'c', 'd'
+        }, Files.readAllBytes(outputBinPath));
+
+        // halves together
+        // invert input / output !
+        try (
+                SeekableByteChannel newInputBinChannel = Files.newByteChannel(outputBinPath,
+                        StandardOpenOption.READ);
+                SeekableByteChannel newOutputBinChannel = Files.newByteChannel(inputBinPath,
+                        StandardOpenOption.WRITE)
+        ) {
+            MultiregionCachedNioBinaryReader binaryReader3 = new MultiregionCachedNioBinaryReader(newInputBinChannel, List.of(
+                    new MultiregionCachedNioBinaryReader.Region(0, 4),
+                    new MultiregionCachedNioBinaryReader.Region(4, 4)
+            ));
+            CachedNioBinaryWriter binaryWriter3 = new CachedNioBinaryWriter(newOutputBinChannel);
+
+            merger.doKwayMerge(
+                    binaryReader3,
+                    binaryWriter3,
+                    2,
+                    1
+            );
+            binaryWriter3.close();
+        }
+
+        Assertions.assertArrayEquals(new byte[]{
+                'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'
+        }, Files.readAllBytes(inputBinPath));
+
     }
 
 }
