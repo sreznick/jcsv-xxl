@@ -5,6 +5,8 @@ package ru.study21.jcsv.xxl.common;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class CSVMeta {
     protected final Either<Integer, List<String>> _data;
@@ -51,5 +53,9 @@ public class CSVMeta {
             return Objects.equals(_data, ((CSVMeta) o)._data);
         }
         return false;
+    }
+
+    public List<String> toRow() {
+        return IntStream.range(0, size()).mapToObj(this::columnName).collect(Collectors.toList());
     }
 }

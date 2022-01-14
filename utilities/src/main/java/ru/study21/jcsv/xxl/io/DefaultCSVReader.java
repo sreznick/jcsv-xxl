@@ -46,8 +46,8 @@ public class DefaultCSVReader implements CSVReader {
     }
 
     public static class Builder {
-        private boolean _withHeader = false;
-        private char _separator = ',';
+        private boolean _withHeader;
+        private char _separator;
         private final BufferedReader _reader;
 
         public Builder(BufferedReader reader) {
@@ -63,6 +63,11 @@ public class DefaultCSVReader implements CSVReader {
 
         public Builder withoutHeader() {
             _withHeader = false;
+            return this;
+        }
+
+        public Builder setHeader(boolean hasHeader) {
+            _withHeader = hasHeader;
             return this;
         }
 
