@@ -4,9 +4,10 @@
 package ru.study21.jcsv.xxl.common;
 
 import java.util.List;
+import java.util.Objects;
 
 public class CSVMeta {
-    private Either<Integer, List<String>> _data;
+    protected final Either<Integer, List<String>> _data;
 
     private CSVMeta(Either<Integer, List<String>> data) {
         _data = data;
@@ -42,5 +43,13 @@ public class CSVMeta {
 
     public boolean hasNames() {
         return _data.isRight();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if(o instanceof CSVMeta) {
+            return Objects.equals(_data, ((CSVMeta) o)._data);
+        }
+        return false;
     }
 }
