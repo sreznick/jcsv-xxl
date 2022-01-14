@@ -61,14 +61,13 @@ public class SinglePassKwayMergeTest {
                     new MultiregionCachedNioBinaryReader.Region(0, 6 * 3),
                     new MultiregionCachedNioBinaryReader.Region(6 * 3, 6 * 3),
                     new MultiregionCachedNioBinaryReader.Region(6 * 6, 6 * 2)
-            ));
-            CachedNioBinaryWriter binaryWriter = new CachedNioBinaryWriter(outputBinChannel);
+            ), 8192);
+            CachedNioBinaryWriter binaryWriter = new CachedNioBinaryWriter(outputBinChannel, 8192);
 
             merger.doKwayMerge(
                     binaryReader,
                     binaryWriter,
-                    3,
-                    6
+                    3
             );
 
             binaryWriter.close();
@@ -120,14 +119,13 @@ public class SinglePassKwayMergeTest {
             MultiregionCachedNioBinaryReader binaryReader1 = new MultiregionCachedNioBinaryReader(inputBinChannel, List.of(
                     new MultiregionCachedNioBinaryReader.Region(0, 2),
                     new MultiregionCachedNioBinaryReader.Region(2, 2)
-            ));
-            CachedNioBinaryWriter binaryWriter1 = new CachedNioBinaryWriter(outputBinChannel);
+            ), 8192);
+            CachedNioBinaryWriter binaryWriter1 = new CachedNioBinaryWriter(outputBinChannel, 8192);
 
             merger.doKwayMerge(
                     binaryReader1,
                     binaryWriter1,
-                    2,
-                    1
+                    2
             );
             binaryWriter1.close();
         }
@@ -142,14 +140,13 @@ public class SinglePassKwayMergeTest {
             MultiregionCachedNioBinaryReader binaryReader2 = new MultiregionCachedNioBinaryReader(inputBinChannel, List.of(
                     new MultiregionCachedNioBinaryReader.Region(4, 2),
                     new MultiregionCachedNioBinaryReader.Region(6, 2)
-            ));
-            CachedNioBinaryWriter binaryWriter2 = new CachedNioBinaryWriter(outputBinChannel);
+            ), 8192);
+            CachedNioBinaryWriter binaryWriter2 = new CachedNioBinaryWriter(outputBinChannel, 8192);
 
             merger.doKwayMerge(
                     binaryReader2,
                     binaryWriter2,
-                    2,
-                    1
+                    2
             );
             binaryWriter2.close();
         }
@@ -171,14 +168,13 @@ public class SinglePassKwayMergeTest {
             MultiregionCachedNioBinaryReader binaryReader3 = new MultiregionCachedNioBinaryReader(newInputBinChannel, List.of(
                     new MultiregionCachedNioBinaryReader.Region(0, 4),
                     new MultiregionCachedNioBinaryReader.Region(4, 4)
-            ));
-            CachedNioBinaryWriter binaryWriter3 = new CachedNioBinaryWriter(newOutputBinChannel);
+            ), 8192);
+            CachedNioBinaryWriter binaryWriter3 = new CachedNioBinaryWriter(newOutputBinChannel, 8192);
 
             merger.doKwayMerge(
                     binaryReader3,
                     binaryWriter3,
-                    2,
-                    1
+                    2
             );
             binaryWriter3.close();
         }

@@ -5,10 +5,14 @@ import ru.study21.jcsv.xxl.common.CSVMeta;
 import ru.study21.jcsv.xxl.io.*;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.channels.SeekableByteChannel;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.Iterator;
+import java.util.List;
 import java.util.stream.IntStream;
 
 public class ExternalKwayMerge {
@@ -16,13 +20,13 @@ public class ExternalKwayMerge {
     protected static class BatchSorterCSVReader implements CSVReader {
 
         private final CSVReader delegate;
-        private final int batchSize;
+        private final long batchSize;
         private final Comparator<List<String>> rowCmp;
 
         private final List<List<String>> batch;
         private Iterator<List<String>> batchIter = null;
 
-        public BatchSorterCSVReader(CSVReader delegate, int batchSize, Comparator<List<String>> rowCmp) {
+        public BatchSorterCSVReader(CSVReader delegate, long batchSize, Comparator<List<String>> rowCmp) {
             this.delegate = delegate;
             this.batchSize = batchSize;
             this.rowCmp = rowCmp;
@@ -59,22 +63,210 @@ public class ExternalKwayMerge {
 
     private final List<CSVFileBinarizer.ColumnTypeBinarizationParams> binParams;
     private final SortDescription sortDescription;
-    private final int rowSize;
+    private final int entryLen;
 
     public ExternalKwayMerge(
             List<CSVFileBinarizer.ColumnTypeBinarizationParams> binParams,
             SortDescription sortDescription
     ) {
         this.binParams = binParams;
-        this.rowSize = CSVFileBinarizer.calcSumByteLength(binParams);
+        this.entryLen = CSVFileBinarizer.calcSumByteLength(binParams);
         this.sortDescription = sortDescription;
     }
 
-    protected void singlePassKwayMerge(
+    public void singlePassMerge(
+            CSVReader input,
+            CSVWriter output,
+            long approxMemoryLimit,
+            int writingCacheSize
+    ) throws IOException, BrokenContentsException {
+        mergeWrapper(
+                input, output, approxMemoryLimit, new MergeRunnable() {
+                    @Override
+                    public void run(
+                            SeekableByteChannel binInputChannel,
+                            SeekableByteChannel binOutputChannel,
+                            long presortedLen
+                    ) throws IOException {
+                        singlePassKwayMerge(
+                                binInputChannel,
+                                binOutputChannel,
+                                approxMemoryLimit,
+                                presortedLen,
+                                writingCacheSize
+                        );
+                    }
+                }
+        );
+    }
+
+    public void doublePassMerge(
+            CSVReader input,
+            CSVWriter output,
+            long approxMemoryLimit,
+            int k1,
+            int writingCacheSize
+    ) throws BrokenContentsException, IOException {
+        mergeWrapper(
+                input, output, approxMemoryLimit, new MergeRunnable() {
+                    @Override
+                    public void run(
+                            SeekableByteChannel binInputChannel,
+                            SeekableByteChannel binOutputChannel,
+                            long presortedLen
+                    ) throws IOException {
+                        doublePassKwayMerge(
+                                binInputChannel,
+                                binOutputChannel,
+                                approxMemoryLimit,
+                                presortedLen,
+                                k1,
+                                writingCacheSize
+                        );
+                    }
+                }
+        );
+    }
+
+    // ----------- private methods -------------
+
+    private interface MergeRunnable {
+        void run(
+                SeekableByteChannel binInputChannel,
+                SeekableByteChannel binOutputChannel,
+                long presortedLen
+        ) throws IOException;
+    }
+
+    private void mergeWrapper(
+            CSVReader input,
+            CSVWriter output,
+            long approxMemoryLimit,
+            MergeRunnable mergeBlock
+    ) throws IOException, BrokenContentsException {
+        FileManager fm = FileManager.createTempDirectory("merge");
+        Path tempBinInput = fm.createTempFile("binInput");
+        Path tempBinOutput = fm.createTempFile("binOutput");
+
+        // TODO: check if this already is a sorting reader
+        // will need to know actual presortedLen, which by default is unknown until end of file
+        // (presortedLen = binParams.len * batchSize
+
+        // __approximate__ memory limit
+        long batchSize = approxMemoryLimit / entryLen;
+        input = new BatchSorterCSVReader(input, batchSize, sortDescription.toRowComparator());
+
+        CSVFileBinarizer.binarize(input, binParams, tempBinInput);
+
+        try (SeekableByteChannel binInputChannel = Files.newByteChannel(tempBinInput, StandardOpenOption.READ);
+             SeekableByteChannel binOutputChannel = Files.newByteChannel(tempBinOutput, StandardOpenOption.WRITE)
+        ) {
+            long presortedLen = Math.min(binInputChannel.size(), batchSize * entryLen);
+            mergeBlock.run(binInputChannel, binOutputChannel, presortedLen);
+        }
+
+        CSVFileBinarizer.debinarize(tempBinOutput, binParams, output);
+    }
+
+    private void singlePassKwayMerge(
+            SeekableByteChannel binInputChannel,
+            SeekableByteChannel binOutputChannel,
+            long approxMemLimit,
+            long presortedLen,
+            int writingCacheSize
+    ) throws IOException {
+
+        approxMemLimit -= writingCacheSize;
+        if (approxMemLimit < 0) {
+            throw new IllegalArgumentException("not enough memory provided");
+        }
+
+        // setup reader
+        long inputSize = binInputChannel.size();
+        // TODO: next line might be the cause of OOM if too many columns
+        // although for binary files #columns is supposed to be low
+        int singleRegionCacheSize = Math.max((int) (inputSize / approxMemLimit), 1024);
+        List<MultiregionCachedNioBinaryReader.Region> regions = new ArrayList<>((int) (inputSize / presortedLen));
+        for (long r = 0; r <= inputSize - presortedLen; r += presortedLen) {
+            regions.add(new MultiregionCachedNioBinaryReader.Region(r, presortedLen));
+        }
+        if (inputSize % presortedLen != 0) {
+            long lastLen = inputSize % presortedLen;
+            regions.add(new MultiregionCachedNioBinaryReader.Region(inputSize - lastLen, lastLen));
+        }
+
+        try (
+                MultiregionCachedNioBinaryReader reader = new MultiregionCachedNioBinaryReader(binInputChannel, regions, singleRegionCacheSize);
+                CachedNioBinaryWriter writer = new CachedNioBinaryWriter(binOutputChannel, writingCacheSize)
+        ) {
+            // go go go
+            doKwayMerge(
+                    reader,
+                    writer,
+                    regions.size()
+            );
+        }
+    }
+
+    private void doublePassKwayMerge(
+            SeekableByteChannel binInputChannel,
+            SeekableByteChannel binOutputChannel,
+            long approxMemLimit,
+            long presortedLen,
+            int k1, // k for first pass
+            int writingCacheSize
+    ) throws IOException {
+        approxMemLimit -= writingCacheSize;
+        if (approxMemLimit < 0) {
+            throw new IllegalArgumentException("not enough memory provided");
+        }
+        Path tempFile = FileManager.createTempDirectory("singlePassKwayMerge").createTempFile("temp");
+
+        // first pass writes to temporary file
+        try (SeekableByteChannel tempChannel = Files.newByteChannel(tempFile, StandardOpenOption.WRITE)) {
+            long inputSize = binInputChannel.size();
+            int readCacheSize = (int) (approxMemLimit / k1);
+
+            for (long firstPassStart = 0; firstPassStart < inputSize; firstPassStart += k1 * presortedLen) {
+                // setup reader
+                List<MultiregionCachedNioBinaryReader.Region> regions = new ArrayList<>(k1);
+                long partEnd = Math.min(inputSize, firstPassStart + k1 * presortedLen);
+                for (long r = firstPassStart; r <= partEnd - presortedLen; r += presortedLen) {
+                    regions.add(new MultiregionCachedNioBinaryReader.Region(r, presortedLen));
+                }
+                if (partEnd % presortedLen != 0) {
+                    long lastLen = partEnd % presortedLen;
+                    regions.add(new MultiregionCachedNioBinaryReader.Region(partEnd - lastLen, lastLen));
+                }
+
+                try (
+                        MultiregionCachedNioBinaryReader reader = new MultiregionCachedNioBinaryReader(binInputChannel, regions, readCacheSize);
+                        CachedNioBinaryWriter writer = new CachedNioBinaryWriter(tempChannel, writingCacheSize)
+                ) {
+                    doKwayMerge(reader, writer, regions.size());
+                }
+
+            }
+        }
+
+        // now the second pass is simply a single pass with new params
+        try (SeekableByteChannel tempChannel = Files.newByteChannel(tempFile, StandardOpenOption.READ)) {
+            singlePassKwayMerge(
+                    tempChannel,
+                    binOutputChannel,
+                    approxMemLimit,
+                    Math.min(tempChannel.size(), k1 * presortedLen),
+                    writingCacheSize
+            );
+        }
+    }
+
+    // triple pass is basically never practical
+
+    protected void doKwayMerge(
             MultiregionCachedNioBinaryReader reader,
             CachedNioBinaryWriter writer,
-            int regionCount,
-            int entryLen
+            int regionCount
     ) throws IOException {
 
         // initialize variables
@@ -82,7 +274,7 @@ public class ExternalKwayMerge {
 
         List<Integer> offsets = new ArrayList<>(binParams.size());
         for (int index = 0; index < binParams.size(); index++) {
-            // TODO this is O(binParams.size ^ 2), can do better (but does it matter?)
+            // TODO this is O(binParams.size ^ 2), can do linear (but does it matter?)
             offsets.add(CSVFileBinarizer.calcOffset(binParams, index));
         }
 
@@ -141,6 +333,7 @@ public class ExternalKwayMerge {
             }
             heap.add(r); // updates heap
         }
+        // sanity check (did fail...)
         assert cnt == reader.regionLenSum() / entryLen;
     }
 

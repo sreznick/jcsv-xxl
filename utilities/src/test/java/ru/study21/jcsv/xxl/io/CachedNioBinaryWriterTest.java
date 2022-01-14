@@ -14,8 +14,7 @@ public class CachedNioBinaryWriterTest {
     public void test() throws IOException {
         Path path = FileManager.createTempDirectory("cachedniobinarywritertest").createTempFile("file");
 
-        CachedNioBinaryWriter.setCacheSize(4);
-        CachedNioBinaryWriter writer = new CachedNioBinaryWriter(Files.newByteChannel(path, StandardOpenOption.WRITE));
+        CachedNioBinaryWriter writer = new CachedNioBinaryWriter(Files.newByteChannel(path, StandardOpenOption.WRITE), 4);
 
         byte[] arr = new byte[]{1, 2, 3, 4, 5, 6, 7, 8, 9};
         writer.write(arr);

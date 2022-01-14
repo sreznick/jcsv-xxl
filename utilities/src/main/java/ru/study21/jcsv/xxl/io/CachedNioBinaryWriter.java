@@ -6,16 +6,12 @@ import java.nio.channels.SeekableByteChannel;
 
 public class CachedNioBinaryWriter implements AutoCloseable {
 
-    private static int CACHE_SIZE = 8196; // 65536 for large files?
+    private final int CACHE_SIZE; // 65536 for large files?
     private final ByteBuffer writeCache;
     private final SeekableByteChannel binChannel;
 
-    // use with caution!
-    public static void setCacheSize(int cacheSize) {
+    public CachedNioBinaryWriter(SeekableByteChannel binChannel, int cacheSize) {
         CACHE_SIZE = cacheSize;
-    }
-
-    public CachedNioBinaryWriter(SeekableByteChannel binChannel) {
         this.binChannel = binChannel;
         writeCache = ByteBuffer.allocate(CACHE_SIZE);
     }
@@ -42,6 +38,6 @@ public class CachedNioBinaryWriter implements AutoCloseable {
     @Override
     public void close() throws IOException {
         flushWriteCache();
-        binChannel.close();
+//        binChannel.close(); this is VERY rude
     }
 }
