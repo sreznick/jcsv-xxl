@@ -8,10 +8,14 @@ import ru.study21.jcsv.xxl.common.BrokenContentsException;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.math.BigInteger;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -283,5 +287,87 @@ public class CSVFileBinarizerTest {
 
         assertThrows(IllegalArgumentException.class, () -> CSVFileBinarizer.binarize(inReader, binParams, binFile));
     }
+
+    public static class MyRandom {
+        private final Random r;
+
+        public MyRandom(int seed) {
+            r = new Random(seed);
+        }
+
+
+        public int randomInt() {
+            return r.nextInt();
+        }
+
+        private final ByteBuffer tmp = ByteBuffer.allocate(8);
+
+        public long randomLong() {
+            return tmp.clear().putInt(randomInt()).putInt(randomInt()).flip().getLong();
+        }
+
+        // always of length <= 16 for our purposes
+        public BigInteger randomBigInt() {
+            long positiveLong;
+            do {
+                positiveLong = randomLong();
+            } while (positiveLong < 0);
+            return new BigInteger(randomLong() + "" + positiveLong);
+        }
+
+        public char randomChar() {
+            return (char) ('a' + r.nextInt('z' - 'a'));
+        }
+
+        public String randomString(int length) {
+            return IntStream.generate(this::randomChar).mapToObj(Character::toString).limit(length).collect(Collectors.joining());
+        }
+    }
+
+    @Test
+    public void stress() throws BrokenContentsException, IOException {
+        MyRandom r = new MyRandom(5);
+
+        CSVFileBinarizer.IntCTBS intCTBS = new CSVFileBinarizer.IntCTBS();
+        CSVFileBinarizer.LongCTBS longCTBS = new CSVFileBinarizer.LongCTBS();
+        CSVFileBinarizer.BigIntCTBS bigIntCTBS = new CSVFileBinarizer.BigIntCTBS(16);
+        CSVFileBinarizer.StringCTBS stringCTBS = new CSVFileBinarizer.StringCTBS(10, StandardCharsets.US_ASCII);
+        List<CSVFileBinarizer.ColumnTypeBinarizationParams> binParams = List.of(
+                intCTBS, longCTBS, bigIntCTBS, stringCTBS, intCTBS
+        );
+
+        for (int round = 0; round < 1000; round++) {
+            setupIO();
+
+            List<List<String>> table = new ArrayList<>();
+            for (int t = 0; t < 100; t++) {
+                table.add(List.of(
+                        String.valueOf(r.randomInt()),
+                        String.valueOf(r.randomLong()),
+                        r.randomBigInt().toString(),
+                        r.randomString(10),
+                        String.valueOf(r.randomInt())
+                ));
+            }
+            writeData(table);
+
+            CSVFileBinarizer.binarize(inReader, binParams, binFile);
+            CSVFileBinarizer.debinarize(binFile, binParams, outWriter);
+
+            outBufWriter.flush();
+            outReader = DefaultCSVReader.builder(Files.newBufferedReader(csvOutFile)).withoutHeader().build();
+
+            for (List<String> row : table) {
+                assertEquals(row, outReader.nextRow());
+            }
+            assertEquals(0, outReader.nextRow().size());
+
+            // clear files
+            Files.writeString(csvInFile, "", StandardOpenOption.TRUNCATE_EXISTING);
+            Files.write(binFile, new byte[]{}, StandardOpenOption.TRUNCATE_EXISTING);
+            Files.writeString(csvOutFile, "", StandardOpenOption.TRUNCATE_EXISTING);
+        }
+    }
+
 
 }
