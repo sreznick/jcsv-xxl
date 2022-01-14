@@ -32,10 +32,16 @@ public class RecordParser implements RecordSupplier {
                 throw new IllegalArgumentException("Not closed quote");
             }
 
-            char c = (char)v;
+            char c = (char) v;
             if (c == '"') {
                 v = reader.read();
                 if (v < 0 || v == '\n' || v == '\r') {
+                    if (v == '\r') {
+                        if (reader.read() != '\n') {
+                            // TODO support CR (maybe not?)
+                            throw new RuntimeException("assumed CRLF, got CR");
+                        }
+                    }
                     return new Result(Reason.END_OF_LINE, result.toString());
                 } else if (v == _separator) {
                     return new Result(Reason.END_OF_COLUMN, result.toString());
@@ -61,12 +67,18 @@ public class RecordParser implements RecordSupplier {
                 return new Result(Reason.END_OF_INPUT, result.toString());
             }
 
-            char c = (char)v;
+            char c = (char) v;
             if (c == _separator) {
                 return new Result(Reason.END_OF_COLUMN, result.toString());
 
-            } else if (c == '\n'/* || c == '\r'*/) { // TODO: fix: for CRLF it stops after \r, the next result is '\n'
-                    return new Result(Reason.END_OF_LINE, result.toString());
+            } else if (c == '\n' || c == '\r') {
+                if (v == '\r') {
+                    if (reader.read() != '\n') {
+                        // TODO support CR (maybe not?)
+                        throw new RuntimeException("assumed CRLF, got CR");
+                    }
+                }
+                return new Result(Reason.END_OF_LINE, result.toString());
             } else {
                 result.append(c);
             }
@@ -97,6 +109,7 @@ public class RecordParser implements RecordSupplier {
         END_OF_COLUMN,
         END_OF_INPUT
     }
+
     private static record Result(Reason reason, String value) {
     }
 }
