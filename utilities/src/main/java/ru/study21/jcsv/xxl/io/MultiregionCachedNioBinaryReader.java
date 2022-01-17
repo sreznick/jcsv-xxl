@@ -1,9 +1,12 @@
 package ru.study21.jcsv.xxl.io;
 
+import ru.study21.jcsv.xxl.common.ManualByteBufferAllocator;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SeekableByteChannel;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -36,8 +39,9 @@ public class MultiregionCachedNioBinaryReader implements AutoCloseable {
                 throw new IllegalArgumentException("only consecutive regions are supported");
             }
         }
-        IntStream.range(0, regions.size()).forEach(i ->
-                readCaches.add(ByteBuffer.allocate(CACHE_SIZE)));
+//        IntStream.range(0, regions.size()).forEach(i ->
+//                readCaches.add(ByteBuffer.allocate(CACHE_SIZE)));
+        readCaches.addAll(Arrays.asList(ManualByteBufferAllocator.allocate(regions.size(), CACHE_SIZE)));
         this.regions = regions;
 
         regionsPos = regions.stream().map(Region::start).collect(Collectors.toCollection(ArrayList::new));
@@ -68,7 +72,7 @@ public class MultiregionCachedNioBinaryReader implements AutoCloseable {
         assert logicLen >= 0;
         assert logicLen <= curRegion.len;
         assert regionsPos.get(region) + logicLen <= curRegion.start + curRegion.len;
-        if(logicLen > CACHE_SIZE) {
+        if (logicLen > CACHE_SIZE) {
             throw new IllegalStateException("cache too small");
         }
 

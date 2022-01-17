@@ -1,7 +1,5 @@
 package ru.study21.jcsv.xxl.io;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
@@ -13,28 +11,33 @@ import java.nio.channels.FileChannel;
 public class CSVOffsetExtractor {
 
     // NOTE: input file MUST have line break at the end!
-    public static void extractOffsets(
+    // returns shift from header
+    public static int extractOffsets(
             FileChannel inputChannel,
             FileChannel outputChannel,
             int readBufferSize,
-            int writeBufferSize
+            int writeBufferSize,
+            boolean withHeader
     ) throws IOException {
         ByteBuffer readBuf = ByteBuffer.allocate(readBufferSize);
         ByteBuffer writeBuf = ByteBuffer.allocate(writeBufferSize);
         long pos = 0;
-
-        long cnt = 0;
+        int headerShift = 0;
         while (inputChannel.read(readBuf) > 0) {
             readBuf.flip();
             while (readBuf.hasRemaining()) {
                 byte c = readBuf.get();
                 if (c == '\n') {
-                    cnt++;
-                    writeBuf.putLong(pos);
-                    if (writeBuf.remaining() < 8) {
-                        writeBuf.flip();
-                        outputChannel.write(writeBuf);
-                        writeBuf.clear();
+                    if (withHeader) {
+                        headerShift = (int) pos;
+                        withHeader = false;
+                    } else {
+                        writeBuf.putLong(pos);
+                        if (writeBuf.remaining() < 8) {
+                            writeBuf.flip();
+                            outputChannel.write(writeBuf);
+                            writeBuf.clear();
+                        }
                     }
                 }
                 pos++;
@@ -47,6 +50,8 @@ public class CSVOffsetExtractor {
             outputChannel.write(writeBuf);
             writeBuf.clear();
         }
+
+        return headerShift;
     }
 
 }

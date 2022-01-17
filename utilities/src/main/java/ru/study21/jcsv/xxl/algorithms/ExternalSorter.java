@@ -1,6 +1,7 @@
 package ru.study21.jcsv.xxl.algorithms;
 
 import ru.study21.jcsv.xxl.common.BrokenContentsException;
+import ru.study21.jcsv.xxl.common.ManualByteBufferAllocator;
 import ru.study21.jcsv.xxl.common.Utility;
 import ru.study21.jcsv.xxl.io.*;
 
@@ -67,14 +68,33 @@ public class ExternalSorter {
 
         // permute source = generate offsets + for (pos in index) { read offsets and write offset value to output }
         // in fact, no need to debinarize index
+        int offsetsHeaderShift;
         try (
                 FileChannel inputChannel = FileChannel.open(inputCsvFile, StandardOpenOption.READ);
                 FileChannel offsetsChannel = FileChannel.open(offsetsFile, StandardOpenOption.WRITE)
         ) {
             // offsets
-            CSVOffsetExtractor.extractOffsets(inputChannel, offsetsChannel, writingCacheSize, writingCacheSize);
+            offsetsHeaderShift = CSVOffsetExtractor.extractOffsets(
+                    inputChannel,
+                    offsetsChannel,
+                    writingCacheSize,
+                    writingCacheSize,
+                    inputCsvReader.meta().hasNames()
+            );
         }
-        doPermuteAndWriteOutput(inputCsvFile, outputCsvFile, approxMemoryLimit, writingCacheSize, raCacheCount, sortedIndexBinaryFile, offsetsFile, entryLen);
+        doPermuteAndWriteOutput(
+                inputCsvFile,
+                outputCsvFile,
+                approxMemoryLimit,
+                writingCacheSize,
+                raCacheCount,
+                sortedIndexBinaryFile,
+                offsetsFile,
+                entryLen,
+                offsetsHeaderShift
+        );
+
+        ManualByteBufferAllocator.deallocate();
     }
 
     private static void doPermuteAndWriteOutput(
@@ -85,7 +105,8 @@ public class ExternalSorter {
             int raCacheCount,
             Path sortedIndexBinaryFile,
             Path offsetsFile,
-            int entryLen
+            int entryLen,
+            int offsetHeaderShift
     ) throws IOException {
         try (
                 FileChannel inputChannel = FileChannel.open(inputCsvFile, StandardOpenOption.READ);
@@ -101,6 +122,13 @@ public class ExternalSorter {
             ByteBuffer tmpBuffer = ByteBuffer.allocate(8);
             byte[] newLineArray = new byte[]{'\n'};
 
+            // don't forget the header!
+            if (offsetHeaderShift > 0) {
+                ByteBuffer headerBuffer = ByteBuffer.allocate(offsetHeaderShift);
+                inputChannel.read(headerBuffer);
+                outputWriter.write(headerBuffer.array());
+            }
+
             for (ByteBuffer sortedIndexBuffer = ByteBuffer.allocate(entryLen);
                  sortedIndexByteChannel.read(sortedIndexBuffer) != -1;
             ) {
@@ -115,7 +143,7 @@ public class ExternalSorter {
                 }
                 long offsetEnd = tmpBuffer.flip().getLong();
                 tmpBuffer.clear();
-                long offsetStart = 0;
+                long offsetStart = offsetHeaderShift;
                 if (rowNum != 0) {
                     if (offsetsChannel.position((rowNum - 1) * 8).read(tmpBuffer) != 8) {
                         throw new IllegalStateException("cannot read offset start");

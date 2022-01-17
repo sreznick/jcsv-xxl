@@ -1,5 +1,7 @@
 package ru.study21.jcsv.xxl.io;
 
+import ru.study21.jcsv.xxl.common.ManualByteBufferAllocator;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
@@ -46,10 +48,11 @@ public class RandomAccessCachedNioReader {
             throw new IllegalArgumentException("too large cache size");
         }
         int cacheSize = (int) (approxMemoryLimit / cacheCount);
-        caches = new ByteBuffer[cacheCount];
+//        caches = new ByteBuffer[cacheCount];
+        caches = ManualByteBufferAllocator.allocate(cacheCount, cacheSize);
         positions = new long[cacheCount];
         for (int i = 0; i < cacheCount; i++) {
-            caches[i] = ByteBuffer.allocate(cacheSize);
+//            caches[i] = ByteBuffer.allocate(cacheSize); // OOM
             positions[i] = Long.MAX_VALUE; // ensure no cache works until written at least once
         }
 
