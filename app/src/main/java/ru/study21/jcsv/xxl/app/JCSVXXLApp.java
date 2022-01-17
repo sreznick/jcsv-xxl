@@ -11,7 +11,8 @@ import java.util.List;
         name = "jcsvxxl",
         subcommands = {
                 SummaryCommand.class,
-                SortCommand.class
+                SortCommand.class,
+                CutCommand.class
         })
 public class JCSVXXLApp {
 
