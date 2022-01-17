@@ -63,6 +63,9 @@ public record SortDescription(List<KeyElement> keys) {
                     }
                     default -> throw new IllegalStateException("Internal error");
                 }
+                if(key.order == Order.DESCENDING) {
+                    cmpResult = -cmpResult;
+                }
                 if (cmpResult != 0) {
                     return cmpResult;
                 }

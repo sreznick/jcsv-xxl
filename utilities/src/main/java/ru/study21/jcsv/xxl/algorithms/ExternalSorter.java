@@ -22,7 +22,7 @@ public class ExternalSorter {
             Path inputCsvFile,
             CSVReader inputCsvReader,
             SortDescription sortDesc,
-            List<CSVFileBinarizer.ColumnTypeBinarizationParams> binParams, // only for key columns (!)
+            List<CSVFileBinarizer.ColumnTypeBinarizationParams> indexBinParams, // only for key columns (!)
             Path outputCsvFile,
             long approxMemoryLimit,
             int writingCacheSize, // also used as reading cache size when necessary
@@ -43,7 +43,8 @@ public class ExternalSorter {
         }
         indexSortDescElements.add(SortDescription.KeyElement.asLong(indexSortDescElements.size())); // enumeration column
         SortDescription indexSortDesc = SortDescription.of(indexSortDescElements);
-        List<CSVFileBinarizer.ColumnTypeBinarizationParams> indexBinParams = Utility.slice(binParams, toCut);
+//        List<CSVFileBinarizer.ColumnTypeBinarizationParams> indexBinParams = Utility.slice(binParams, toCut);
+        indexBinParams = new ArrayList<>(indexBinParams); // modifiable
         indexBinParams.add(new CSVFileBinarizer.LongCTBS()); // enumeration
 
         // inputReader -> cut -> enumerate = create index, add enumeration param

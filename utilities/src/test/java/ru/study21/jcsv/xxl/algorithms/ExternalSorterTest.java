@@ -8,6 +8,7 @@ import ru.study21.jcsv.xxl.io.DefaultCSVReader;
 import ru.study21.jcsv.xxl.io.FileManager;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -40,14 +41,14 @@ public class ExternalSorterTest {
 
         // setup variables
         DefaultCSVReader inputReader = DefaultCSVReader.builder(Files.newBufferedReader(inputFile)).build();
-        SortDescription sortDesc = SortDescription.of(0, SortDescription.KeyType.LONG);
-        CSVFileBinarizer.IntCTBS intCTBS = new CSVFileBinarizer.IntCTBS();
+        SortDescription sortDesc = SortDescription.of(new SortDescription.KeyElement(1, SortDescription.KeyType.STRING, SortDescription.Order.DESCENDING));
+        CSVFileBinarizer.StringCTBS stringCTBS = new CSVFileBinarizer.StringCTBS(1, StandardCharsets.US_ASCII);
 
         ExternalSorter.sort_maximum(
                 inputFile,
                 inputReader,
                 sortDesc,
-                List.of(intCTBS),
+                List.of(stringCTBS),
                 outputFile,
                 8192,
                 128,
