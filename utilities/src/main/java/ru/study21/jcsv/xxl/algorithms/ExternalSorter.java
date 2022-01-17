@@ -161,6 +161,8 @@ public class ExternalSorter {
                 outputWriter.write(data);
                 outputWriter.write(newLineArray);
             }
+
+            System.out.println("RA miss rate: " + raSourceReader.missRate());
         }
     }
 

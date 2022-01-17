@@ -21,7 +21,7 @@ public class ManualByteBufferAllocator {
     // ATTENTION: the old buffers STILL CAN access data!
     // GC better take care of them...
     public static ByteBuffer[] allocate(int count, int size) {
-        System.out.println("Allocating " + count + " x " + size + " = " + ((long) count * size));
+//        System.out.println("Allocating " + count + " x " + size + " = " + ((long) count * size));
         try {
             if (size > allocationSize) {
                 throw new IllegalArgumentException("requested buffers too large");

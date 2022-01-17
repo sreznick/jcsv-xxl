@@ -15,6 +15,9 @@ public class RandomAccessCachedNioReader {
     private final FileChannel channel;
     private final CachePolicy cachePolicy;
 
+    private long cacheMissCnt;
+    private long readCnt;
+
     public interface CachePolicy {
         int readCache(long pos) throws IOException; // return index of new cache
 
@@ -64,8 +67,10 @@ public class RandomAccessCachedNioReader {
     }
 
     public void read(byte[] arr, long pos) throws IOException {
+        readCnt++;
         int cacheIndex = fittingCache(pos, arr.length);
         if (cacheIndex == -1) {
+            cacheMissCnt++;
             cacheIndex = cachePolicy.readCache(pos);
         }
         cachePolicy.didRead(cacheIndex);
@@ -86,6 +91,10 @@ public class RandomAccessCachedNioReader {
             }
         }
         return -1;
+    }
+
+    public double missRate() {
+        return (double) cacheMissCnt / readCnt;
     }
 
 }
