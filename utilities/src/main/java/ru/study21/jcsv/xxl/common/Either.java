@@ -1,5 +1,7 @@
 package ru.study21.jcsv.xxl.common;
 
+import java.util.Objects;
+
 public class Either<T, U> {
     private final T _left;
     private final U _right;
@@ -39,5 +41,13 @@ public class Either<T, U> {
             return _right;
         }
         throw new IllegalStateException("it is not right");
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o instanceof Either) {
+            return Objects.equals(_left, ((Either<?, ?>) o)._left) && Objects.equals(_right, ((Either<?, ?>) o)._right);
+        }
+        return false;
     }
 }
