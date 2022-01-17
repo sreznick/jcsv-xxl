@@ -23,13 +23,15 @@ public class CSVOffsetExtractor {
         ByteBuffer writeBuf = ByteBuffer.allocate(writeBufferSize);
         long pos = 0;
 
+        long cnt = 0;
         while (inputChannel.read(readBuf) > 0) {
             readBuf.flip();
             while (readBuf.hasRemaining()) {
                 byte c = readBuf.get();
                 if (c == '\n') {
+                    cnt++;
                     writeBuf.putLong(pos);
-                    if (writeBuf.remaining() < 4) {
+                    if (writeBuf.remaining() < 8) {
                         writeBuf.flip();
                         outputChannel.write(writeBuf);
                         writeBuf.clear();
@@ -37,7 +39,9 @@ public class CSVOffsetExtractor {
                 }
                 pos++;
             }
+            readBuf.clear();
         }
+
         if (writeBuf.position() > 0) {
             writeBuf.flip();
             outputChannel.write(writeBuf);

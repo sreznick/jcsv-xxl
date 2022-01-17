@@ -80,7 +80,7 @@ public class ExternalKwayMerge {
             long approxMemoryLimit,
             int writingCacheSize
     ) throws IOException, BrokenContentsException {
-        mergeWrapper(
+        sortAndMergeWrapper(
                 input, output, approxMemoryLimit, new MergeRunnable() {
                     @Override
                     public void run(
@@ -107,7 +107,7 @@ public class ExternalKwayMerge {
             int k1,
             int writingCacheSize
     ) throws BrokenContentsException, IOException {
-        mergeWrapper(
+        sortAndMergeWrapper(
                 input, output, approxMemoryLimit, new MergeRunnable() {
                     @Override
                     public void run(
@@ -128,6 +128,34 @@ public class ExternalKwayMerge {
         );
     }
 
+    // set optimal k1 automatically (sqrt of entry count)
+    public void doublePassMerge(
+            CSVReader input,
+            CSVWriter output,
+            long approxMemoryLimit,
+            int writingCacheSize
+    ) throws BrokenContentsException, IOException {
+        sortAndMergeWrapper(
+                input, output, approxMemoryLimit, new MergeRunnable() {
+                    @Override
+                    public void run(
+                            SeekableByteChannel binInputChannel,
+                            SeekableByteChannel binOutputChannel,
+                            long presortedLen
+                    ) throws IOException {
+                        doublePassKwayMerge(
+                                binInputChannel,
+                                binOutputChannel,
+                                approxMemoryLimit,
+                                presortedLen,
+                                (int) Math.sqrt(binInputChannel.size() / entryLen), // integer division will be precise
+                                writingCacheSize
+                        );
+                    }
+                }
+        );
+    }
+
     // ----------- private methods -------------
 
     private interface MergeRunnable {
@@ -138,7 +166,7 @@ public class ExternalKwayMerge {
         ) throws IOException;
     }
 
-    private void mergeWrapper(
+    protected void sortAndMergeWrapper(
             CSVReader input,
             CSVWriter output,
             long approxMemoryLimit,
@@ -168,7 +196,7 @@ public class ExternalKwayMerge {
         CSVFileBinarizer.debinarize(tempBinOutput, binParams, output);
     }
 
-    private void singlePassKwayMerge(
+    protected void singlePassKwayMerge(
             SeekableByteChannel binInputChannel,
             SeekableByteChannel binOutputChannel,
             long approxMemLimit,
@@ -208,7 +236,7 @@ public class ExternalKwayMerge {
         }
     }
 
-    private void doublePassKwayMerge(
+    protected void doublePassKwayMerge(
             SeekableByteChannel binInputChannel,
             SeekableByteChannel binOutputChannel,
             long approxMemLimit,

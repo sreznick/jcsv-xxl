@@ -2,15 +2,16 @@ package ru.study21.jcsv.xxl.io;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.ByteChannel;
 import java.nio.channels.SeekableByteChannel;
 
 public class CachedNioBinaryWriter implements AutoCloseable {
 
     private final int CACHE_SIZE; // 65536 for large files?
     private final ByteBuffer writeCache;
-    private final SeekableByteChannel binChannel;
+    private final ByteChannel binChannel;
 
-    public CachedNioBinaryWriter(SeekableByteChannel binChannel, int cacheSize) {
+    public CachedNioBinaryWriter(ByteChannel binChannel, int cacheSize) {
         CACHE_SIZE = cacheSize;
         this.binChannel = binChannel;
         writeCache = ByteBuffer.allocate(CACHE_SIZE);
