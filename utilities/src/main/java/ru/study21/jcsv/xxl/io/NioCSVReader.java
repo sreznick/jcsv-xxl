@@ -110,6 +110,8 @@ public class NioCSVReader implements CSVReader {
                 lastSymbolQuote = false;
                 if (c == '\n' || c == '\r') {
                     if (lastSymbolSeparator) {
+                        System.out.println(result);
+                        System.out.println(sb);
                         throw new BrokenContentsException("last entry in row should not be followed by a separator");
                     }
 //                    lastSymbolSeparator = false; // definitely false here

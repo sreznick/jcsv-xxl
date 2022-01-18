@@ -27,7 +27,7 @@ public class ManualByteBufferAllocator {
                 throw new IllegalArgumentException("requested buffers too large");
             }
             if (bufs.size() == 0) {
-                bufs.add(ByteBuffer.allocate(allocationSize));
+                bufs.add(ByteBuffer.allocateDirect(allocationSize));
             }
             ByteBuffer[] result = new ByteBuffer[count];
             int buf = 0;
@@ -36,7 +36,7 @@ public class ManualByteBufferAllocator {
                 if (allocationSize - used < size) {
                     buf++;
                     if (bufs.size() == buf) {
-                        bufs.add(ByteBuffer.allocate(allocationSize));
+                        bufs.add(ByteBuffer.allocateDirect(allocationSize));
                     }
                     used = 0;
                 }

@@ -33,7 +33,11 @@ public class RandomAccessCachedNioReader {
         public int readCache(long pos) throws IOException {
             int index = random.nextInt(caches.length);
             caches[index].clear();
-            channel.read(caches[index], pos); // might not fill to capacity!
+
+//            channel.read(caches[index], pos); // might not fill to capacity!
+            channel.position(pos);
+            channel.read(caches[index]);
+
             positions[index] = pos;
             return index;
         }
@@ -68,6 +72,10 @@ public class RandomAccessCachedNioReader {
 
     public void read(byte[] arr, long pos) throws IOException {
         readCnt++;
+        if(readCnt % 10000 == 0) {
+            System.out.println(readCnt + " / " + missRate());
+        }
+
         int cacheIndex = fittingCache(pos, arr.length);
         if (cacheIndex == -1) {
             cacheMissCnt++;

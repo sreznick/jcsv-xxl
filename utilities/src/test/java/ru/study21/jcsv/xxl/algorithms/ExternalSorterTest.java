@@ -12,7 +12,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
@@ -52,7 +51,8 @@ public class ExternalSorterTest {
                 outputFile,
                 8192,
                 128,
-                4
+                4,
+                16
         );
 
         String result = Files.readString(outputFile).replace("\r\n", "\n");
@@ -102,7 +102,8 @@ public class ExternalSorterTest {
                     outputFile,
                     8196,
                     256,
-                    4
+                    4,
+                    16
             );
 
             String result = Files.readString(outputFile).replace("\r\n", "\n");

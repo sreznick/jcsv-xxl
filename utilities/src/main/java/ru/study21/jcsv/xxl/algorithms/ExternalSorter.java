@@ -18,6 +18,10 @@ import java.util.List;
 
 public class ExternalSorter {
 
+    // ---------------------------------
+    // full pipeline
+    // ---------------------------------
+
     // use the entire pipeline (for the largest files)
     public static void sort_maximum(
             Path inputCsvFile,
@@ -27,7 +31,8 @@ public class ExternalSorter {
             Path outputCsvFile,
             long approxMemoryLimit,
             int writingCacheSize, // also used as reading cache size when necessary
-            int raCacheCount
+            int raCacheCount,
+            int batchSortSize
     ) throws IOException, BrokenContentsException {
         FileManager fm = FileManager.createTempDirectory("sort");
         Path indexBinaryFile = fm.createTempFile("binaryIndex");
@@ -58,13 +63,12 @@ public class ExternalSorter {
         // !!!
 
         int entryLen = CSVFileBinarizer.calcSumByteLength(indexBinParams);
-        long indexBatchSize = approxMemoryLimit / entryLen;
 
         // batchSort input and binarize
-        doBatchSortAndBinarize(indexBinaryFile, indexSortDesc, indexBinParams, enumerator, indexBatchSize);
+        doBatchSortAndBinarize(indexBinaryFile, indexSortDesc, indexBinParams, enumerator, batchSortSize);
 
         // merge index
-        doTwoPassMerge(approxMemoryLimit, writingCacheSize, indexBinaryFile, sortedIndexBinaryFile, indexSortDesc, indexBinParams, entryLen, indexBatchSize);
+        doTwoPassMerge(approxMemoryLimit, writingCacheSize, indexBinaryFile, sortedIndexBinaryFile, indexSortDesc, indexBinParams, entryLen, batchSortSize);
 
         // permute source = generate offsets + for (pos in index) { read offsets and write offset value to output }
         // in fact, no need to debinarize index
@@ -137,8 +141,7 @@ public class ExternalSorter {
                 sortedIndexBuffer.clear();
 
                 // get offset
-                int wtf = offsetsChannel.position(rowNum * 8).read(tmpBuffer);
-                if (wtf != 8) {
+                if (offsetsChannel.position(rowNum * 8).read(tmpBuffer) != 8) {
                     throw new IllegalStateException("cannot read offset end");
                 }
                 long offsetEnd = tmpBuffer.flip().getLong();
@@ -195,17 +198,63 @@ public class ExternalSorter {
     }
 
     private static void doBatchSortAndBinarize(
-            Path indexBinaryFile,
-            SortDescription indexSortDesc,
-            List<CSVFileBinarizer.ColumnTypeBinarizationParams> indexBinParams,
-            EnumeratorCSVReader enumerator,
-            long batchSize
+            Path binaryFile,
+            SortDescription sortDesc,
+            List<CSVFileBinarizer.ColumnTypeBinarizationParams> binParams,
+            CSVReader reader,
+            int batchSize
     ) throws IOException, BrokenContentsException {
         // __approximate__ memory limit
         ExternalKwayMerge.BatchSorterCSVReader batchSorter = new ExternalKwayMerge.BatchSorterCSVReader(
-                enumerator, batchSize, indexSortDesc.toRowComparator()
+                reader, batchSize, sortDesc.toRowComparator()
         );
-        CSVFileBinarizer.binarize(batchSorter, indexBinParams, indexBinaryFile);
+        CSVFileBinarizer.binarize(batchSorter, binParams, binaryFile);
+    }
+
+    // ---------------------------------
+    // binarize entire input
+    // ---------------------------------
+
+    // final permute() seems to be a catastrophic slowdown
+    // instead let's binarize the entire input file
+
+    public static void sort_binarize(
+            CSVReader inputCsvReader,
+            SortDescription sortDesc,
+            List<CSVFileBinarizer.ColumnTypeBinarizationParams> inputBinParams, // for all columns (!)
+            long approxMemoryLimit,
+            int writingCacheSize, // also used as reading cache size when necessary
+            int batchSortSize,
+            CSVWriter outputCsvWriter
+    ) throws IOException, BrokenContentsException {
+        FileManager fm = FileManager.createTempDirectory("sort");
+        Path binaryFile = fm.createTempFile("binary");
+        Path sortedBinaryFile = fm.createTempFile("sortedBinary");
+
+        doBatchSortAndBinarize(
+                binaryFile,
+                sortDesc,
+                inputBinParams,
+                inputCsvReader,
+                batchSortSize
+        );
+
+        doTwoPassMerge(
+                approxMemoryLimit,
+                writingCacheSize,
+                binaryFile,
+                sortedBinaryFile,
+                sortDesc,
+                inputBinParams,
+                CSVFileBinarizer.calcSumByteLength(inputBinParams),
+                batchSortSize
+        );
+
+        if (inputCsvReader.meta().hasNames()) {
+            outputCsvWriter.write(inputCsvReader.meta().toRow());
+        }
+
+        CSVFileBinarizer.debinarize(sortedBinaryFile, inputBinParams, outputCsvWriter);
     }
 
 }

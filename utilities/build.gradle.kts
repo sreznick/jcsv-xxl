@@ -4,6 +4,7 @@
 
 plugins {
     id("ru.study21.jcsv.xxl.java-library-conventions")
+    application
 }
 
 dependencies {
@@ -14,4 +15,8 @@ dependencies {
     testAnnotationProcessor(group="org.projectlombok", name="lombok", version="1.18.22")
 
     implementation("com.typesafe:config:1.4.1")
+}
+
+application {
+    applicationDefaultJvmArgs = listOf("-Xmx6g", "-Xms4g")
 }

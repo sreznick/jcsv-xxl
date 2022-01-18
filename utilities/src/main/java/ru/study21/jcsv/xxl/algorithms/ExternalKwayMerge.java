@@ -26,11 +26,11 @@ public class ExternalKwayMerge {
         private final List<List<String>> batch;
         private Iterator<List<String>> batchIter = null;
 
-        public BatchSorterCSVReader(CSVReader delegate, long batchSize, Comparator<List<String>> rowCmp) {
+        public BatchSorterCSVReader(CSVReader delegate, int batchSize, Comparator<List<String>> rowCmp) {
             this.delegate = delegate;
             this.batchSize = batchSize;
             this.rowCmp = rowCmp;
-            this.batch = new ArrayList<>();
+            this.batch = new ArrayList<>(batchSize);
         }
 
         @Override
@@ -181,7 +181,7 @@ public class ExternalKwayMerge {
         // (presortedLen = binParams.len * batchSize
 
         // __approximate__ memory limit
-        long batchSize = approxMemoryLimit / entryLen;
+        int batchSize = (int) (approxMemoryLimit / entryLen);
         input = new BatchSorterCSVReader(input, batchSize, sortDescription.toRowComparator());
 
         CSVFileBinarizer.binarize(input, binParams, tempBinInput);
