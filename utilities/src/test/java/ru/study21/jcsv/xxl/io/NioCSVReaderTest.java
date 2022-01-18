@@ -112,7 +112,7 @@ public class NioCSVReaderTest {
                 bb","ccc"
                 zzz,yyy,xxx""");
         NioCSVReader reader = getReader(9);
-        assertEquals(List.of("aaa", "bbb", "ccc"), reader.nextRow());
+        assertEquals(List.of("aaa", "b\nbb", "ccc"), reader.nextRow());
         assertEquals(List.of("zzz", "yyy", "xxx"), reader.nextRow());
         assertEquals(List.of(), reader.nextRow());
     }
@@ -124,6 +124,20 @@ public class NioCSVReaderTest {
                 """);
         NioCSVReader reader = getReader(10);
         assertEquals(List.of("aaa", "b\"bb", "ccc"), reader.nextRow());
+        assertEquals(List.of(), reader.nextRow());
+    }
+
+    @Test
+    public void test8_caret() throws IOException, BrokenContentsException {
+        writeFile("""
+                aa,bb,cc
+                xx,yy,zz\r
+                pp,qq,rr
+                """);
+        NioCSVReader reader = getReader(11);
+        assertEquals(List.of("aa", "bb", "cc"), reader.nextRow());
+        assertEquals(List.of("xx", "yy", "zz"), reader.nextRow());
+        assertEquals(List.of("pp", "qq", "rr"), reader.nextRow());
         assertEquals(List.of(), reader.nextRow());
     }
 

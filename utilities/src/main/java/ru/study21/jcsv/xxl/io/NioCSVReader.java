@@ -76,7 +76,7 @@ public class NioCSVReader implements CSVReader {
             return List.of();
         }
 
-        List<String> result = new ArrayList<>();
+        List<String> result = new ArrayList<>(100); // profiled
         StringBuilder sb = new StringBuilder();
         boolean escaping = false;
         boolean lastSymbolQuote = false;
@@ -98,6 +98,7 @@ public class NioCSVReader implements CSVReader {
                     lastSymbolSeparator = false;
                     if (lastSymbolQuote) {
                         sb.append('"');
+                        lastSymbolQuote = false;
                     } else {
                         lastSymbolQuote = true;
                     }
@@ -107,14 +108,19 @@ public class NioCSVReader implements CSVReader {
                     escaping = !escaping;
                 }
                 lastSymbolQuote = false;
-                if (c == '\n') {
+                if (c == '\n' || c == '\r') {
                     if (lastSymbolSeparator) {
                         throw new BrokenContentsException("last entry in row should not be followed by a separator");
                     }
 //                    lastSymbolSeparator = false; // definitely false here
                     if (escaping) {
-                        sb.append('\n');
+                        sb.append((char) c);
                     } else {
+                        if(c == '\r') {
+                            if(readChar() != '\n') {
+                                throw new BrokenContentsException("CR line break is not supported");
+                            }
+                        }
                         result.add(sb.toString());
                         sb.delete(0, sb.length());
                         break;
@@ -133,6 +139,9 @@ public class NioCSVReader implements CSVReader {
                 }
                 lastSymbolSeparator = false;
                 sb.append((char) c);
+            }
+            if (meta != null && result.size() != meta.size() && result.size() != 0) {
+                throw new BrokenContentsException("expected " + meta.size() + " columns but got " + result.size());
             }
             return result;
 
